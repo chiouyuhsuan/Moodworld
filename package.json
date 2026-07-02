@@ -11,16 +11,17 @@
     "db:seed": "node db/run.mjs db/seed.sql"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "next": "14.2.16",
+    "pg": "^8.13.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "pg": "^8.13.1"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.10",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/pg": "^8.11.10",
     "typescript": "^5.5.0"
   }
 }
