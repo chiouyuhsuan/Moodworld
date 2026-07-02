@@ -307,14 +307,14 @@ export default function VoteScreen(props: Props) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginTop: 20, justifyItems: "center", alignItems: "center" }}>
+        <div style={{ display: "flex", width: "100%", marginTop: 20, alignItems: "center" }}>
           {MOODS.map((m) => {
             const sel = m.level === pick;
             return (
               <button
                 key={m.level}
                 onClick={() => setPick(m.level)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 0, width: "100%" }}
+                style={{ display: "flex", flex: "1 1 0%", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 0, minWidth: 0 }}
               >
                 <span
                   style={{

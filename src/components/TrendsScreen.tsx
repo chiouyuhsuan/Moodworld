@@ -209,9 +209,9 @@ export default function TrendsScreen({
                 <div key={d.level} style={{ width: `${d.pct.toFixed(2)}%`, background: d.color, height: "100%" }} />
               ))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginTop: 16, justifyItems: "center" }}>
+            <div style={{ display: "flex", gap: 4, marginTop: 16, alignItems: "center" }}>
               {dist.map((d) => (
-                <div key={d.level} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div key={d.level} style={{ display: "flex", flex: "1 1 0%", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0 }}>
                   <MoodFace color={d.color} mouth={d.mouth} size={26} eyeMouthColor="rgba(28,22,42,.5)" />
                   <span style={{ fontSize: 11.5, fontWeight: 800, color: "#6B6478" }}>{Math.round(d.pct)}%</span>
                 </div>
