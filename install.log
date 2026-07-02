@@ -1,0 +1,7 @@
+npm error code ENOTEMPTY
+npm error syscall rename
+npm error path /sessions/jolly-stoic-lovelace/mnt/outputs/moodworld/node_modules/loose-envify
+npm error dest /sessions/jolly-stoic-lovelace/mnt/outputs/moodworld/node_modules/.loose-envify-u1YgX7T5
+npm error errno -39
+npm error ENOTEMPTY: directory not empty, rename '/sessions/jolly-stoic-lovelace/mnt/outputs/moodworld/node_modules/loose-envify' -> '/sessions/jolly-stoic-lovelace/mnt/outputs/moodworld/node_modules/.loose-envify-u1YgX7T5'
+npm error A complete log of this run can be found in: /sessions/jolly-stoic-lovelace/.npm/_logs/2026-07-02T00_45_43_552Z-debug-0.log
