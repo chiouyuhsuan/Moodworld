@@ -1,14 +1,51 @@
 "use client";
 
+import { useState } from "react";
 import type { GiveSummary } from "@/lib/types";
+import { adsConfigured, showRewardedAd } from "@/lib/ads";
 
-export default function GiveScreen({ summary }: { summary: GiveSummary | null }) {
+type Props = {
+  summary: GiveSummary | null;
+  fingerprint: string;
+  today: string;
+  onCredited: () => void;
+};
+
+export default function GiveScreen({ summary, fingerprint, today, onCredited }: Props) {
   const goal = summary?.monthly_goal ?? 75000;
   const raised = summary?.raised_this_month ?? 0;
   const pct = Math.min(100, (raised / goal) * 100);
   const donatedPct = summary?.donated_pct ?? 65;
   const opsPct = summary?.ops_pct ?? 35;
   const you = summary?.you;
+
+  const configured = adsConfigured();
+  const [status, setStatus] = useState<"idle" | "loading" | "error" | "no-fill">("idle");
+
+  const handleWatchAd = async () => {
+    if (!configured || status === "loading") return;
+    setStatus("loading");
+    try {
+      const result = await showRewardedAd();
+      if (!result.completed || !result.token) {
+        setStatus("no-fill");
+        return;
+      }
+      const res = await fetch("/api/give/ad-watched", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fingerprint, date: today, ad_network: "web", verification: result.token }),
+      });
+      if (res.ok) {
+        setStatus("idle");
+        onCredited();
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  };
 
   return (
     <div style={{ padding: "58px 22px 118px" }}>
@@ -36,14 +73,15 @@ export default function GiveScreen({ summary }: { summary: GiveSummary | null })
             Pass it on.
           </div>
           <div style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.55, opacity: 0.95, marginTop: 10 }}>
-            Watch a short ad. The ad revenue — minus what it costs to run MoodWorld — goes to mental-health support.
+            Tap the ad below. The ad revenue — minus what it costs to run MoodWorld — goes to mental-health support.
           </div>
           <button
-            disabled
+            disabled={!configured || status === "loading"}
+            onClick={handleWatchAd}
             style={{
               marginTop: 18,
               width: "100%",
-              background: "rgba(255,255,255,.55)",
+              background: configured ? "#fff" : "rgba(255,255,255,.55)",
               color: "#E85535",
               borderRadius: 16,
               padding: 15,
@@ -54,25 +92,38 @@ export default function GiveScreen({ summary }: { summary: GiveSummary | null })
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
+              boxShadow: configured ? "0 12px 24px -12px rgba(0,0,0,.3)" : "none",
             }}
           >
-            Watch a short ad
-            <span
-              style={{
-                fontSize: 10.5,
-                fontWeight: 800,
-                letterSpacing: ".4px",
-                background: "rgba(255,255,255,.6)",
-                color: "#B2500F",
-                borderRadius: 999,
-                padding: "3px 8px",
-              }}
-            >
-              COMING SOON
-            </span>
+            {status === "loading" ? "Opening…" : "Tap the ad"}
+            {!configured && (
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  letterSpacing: ".4px",
+                  background: "rgba(255,255,255,.6)",
+                  color: "#B2500F",
+                  borderRadius: 999,
+                  padding: "3px 8px",
+                }}
+              >
+                COMING SOON
+              </span>
+            )}
           </button>
+          {status === "no-fill" && (
+            <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff", marginTop: 8 }}>
+              Couldn&apos;t open the ad — check your popup blocker and try again.
+            </div>
+          )}
+          {status === "error" && (
+            <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff", marginTop: 8 }}>
+              Something went wrong — try again.
+            </div>
+          )}
           <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, opacity: 0.9, marginTop: 10 }}>
-            {you ? you.today_ads : 0} watched today · every bit adds up
+            {you ? you.today_ads : 0} tapped today · every bit adds up
           </div>
         </div>
       </div>
@@ -134,8 +185,8 @@ export default function GiveScreen({ summary }: { summary: GiveSummary | null })
         <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 15, color: "#2B2733" }}>The honest bit</div>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: "#8A8296", lineHeight: 1.6, marginTop: 6 }}>
           This is ad revenue, not a guaranteed donation. We keep a share to run MoodWorld and donate the rest — we can&apos;t promise
-          every cent goes out. We publish the totals and the split each month. (Ads aren&apos;t live yet — the split below is the plan,
-          not a current payout.)
+          every cent goes out. We publish the totals and the split each month.
+          {!configured && " (Ads aren't live yet — the split below is the plan, not a current payout.)"}
         </div>
         <div style={{ display: "flex", height: 14, borderRadius: 99, overflow: "hidden", marginTop: 14 }}>
           <div style={{ width: `${donatedPct}%`, background: "#F2823C" }} />

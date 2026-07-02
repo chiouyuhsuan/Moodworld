@@ -213,7 +213,9 @@ export default function Home() {
               voteRecord={voteRecord}
             />
           )}
-          {tab === "give" && <GiveScreen summary={giveSummary} />}
+          {tab === "give" && (
+            <GiveScreen summary={giveSummary} fingerprint={fingerprint} today={today} onCredited={loadStats} />
+          )}
         </div>
 
         <TabBar active={tab} onChange={setTab} />

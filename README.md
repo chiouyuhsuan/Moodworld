@@ -4,15 +4,29 @@ One tap a day. Vote today's mood, see how the whole world is feeling — happies
 
 This is a full working implementation of the `design_handoff_moodworld` spec: Next.js (App Router) frontend recreating the hi-fi prototype pixel-for-pixel, plus real API routes + PostgreSQL backend (no more localStorage — every vote is a real row, shared by every visitor worldwide).
 
-**Status:** code-complete and type-checked (`tsc --noEmit` passes clean). Not yet deployed to a public URL — follow the steps below to put it online. The full production build (`next build`) could not be verified inside this sandbox specifically because the sandbox's container crashes (SIGBUS) when loading Next.js's native SWC binary — a sandbox limitation, not a bug in this code. It will build normally on Vercel or any normal machine (`npm run build` on your own laptop, or just deploy — Vercel's build step will confirm it).
+**Status:** live at **https://moodworld.vercel.app** — deployed on Vercel + Supabase (Postgres), confirmed working end-to-end (voting, stats API, PWA manifest all serving real data).
 
 ## What's here
 
 - `src/app/page.tsx` + `src/components/*` — the 5 screens (Vote / Global / Ages / Trends / Give), ported faithfully from the design tokens in the original handoff.
 - `src/app/api/**` — the REST API (`/api/vote`, `/api/vote/today`, `/api/stats/global|ages|distribution|trend`, `/api/give/summary`, `/api/give/ad-watched`).
-- `db/schema.sql`, `db/seed.sql` — Postgres schema + reference data (30 countries/continents, 7 age ranges).
+- `db/schema.sql`, `db/seed.sql` — Postgres schema + reference data (169 countries/continents incl. Taiwan, 7 age ranges).
 - `public/manifest.webmanifest`, `public/sw.js` — installable PWA (Add to Home Screen) + minimal offline app-shell caching.
-- **Give tab ships as "Coming soon"** — the watch-an-ad button is disabled with a badge. There's no real ad SDK integrated yet (that requires signing up with an ad network and getting approved), so nothing fake is credited. Wire up a real rewarded-video SDK later and flip `src/app/api/give/ad-watched/route.ts` from its current 501 stub to the real thing.
+- **Give tab ships as "Coming soon"** until an ad network is wired in — see below.
+
+## Give / ads
+
+The Give screen says "Tap the ad" rather than "watch a video" on purpose — it's backed by an **Adsterra Smartlink** (a plain monetized URL), not an embedded video/SDK. Adsterra's actual self-serve ad unit formats (Popunder, Smartlink, Native Banner, Social Bar, Banner) don't include a true rewarded-video format, so the UI copy was deliberately kept generic rather than promising an experience the ad network doesn't provide.
+
+How it works: tapping the button opens the Smartlink in a new tab and, after a few seconds, credits the ad view (`/api/give/ad-watched` → `ad_events` table; `/api/give/summary` reports the real running total). A Smartlink has no completion callback at all — there's no way to verify the user actually engaged with anything beyond the click — so this is inherently more trust-the-client than a true rewarded-video SDK. The per-device daily cap (`MAX_ADS_PER_FINGERPRINT_PER_DAY` in `src/app/api/give/ad-watched/route.ts`) is the only real abuse guard.
+
+**Content safety:** when creating the Adsterra site/zone, leave "Show adult ads" turned OFF, and message Adsterra support to explicitly exclude adult/dating/gambling verticals — this is a manual publisher preference on their side, not something enforceable from our code, so periodically re-check what's actually showing.
+
+To go live:
+1. In your Adsterra dashboard, add the site, keep adult ads off, create a **Smartlink**.
+2. Set `NEXT_PUBLIC_AD_LINK_URL` to that Smartlink URL in Vercel's Environment Variables and redeploy.
+3. The Give button un-disables itself automatically once that env var is set (`adsConfigured()` in `src/lib/ads.ts`).
+4. Test it yourself repeatedly first — click through and confirm the ad content is appropriate — before treating it as live for real visitors.
 
 ## 1. Create the database (Supabase, free tier)
 
