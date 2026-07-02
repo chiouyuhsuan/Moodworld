@@ -34,7 +34,12 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
         <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 15, color: "#C3BBCE", width: 16 }}>{rank}</div>
         <MoodFace color={mo.color} mouth={mo.mouth} size={30} eyeMouthColor="rgba(28,22,42,.5)" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#2B2733" }}>{r.country}</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#2B2733" }}>{r.country}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#C3BBCE", whiteSpace: "nowrap" }}>
+              {r.checkins} {r.checkins === 1 ? "vote" : "votes"}
+            </div>
+          </div>
           <div style={{ height: 7, background: "#F1ECF5", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${((r.average / 7) * 100).toFixed(0)}%`, background: mo.color, borderRadius: 99 }} />
           </div>
