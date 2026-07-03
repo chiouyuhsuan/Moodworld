@@ -5,12 +5,31 @@ import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
+const SITE_URL = "https://moodworld.vercel.app";
+const OG_TITLE = "MoodWorld — one tap a day, the world's mood";
+const OG_DESCRIPTION =
+  "Pick today's mood in one tap. See how the whole world is feeling — happiest and toughest places, mood by age, and trends over time.";
+
 export const metadata: Metadata = {
-  title: "MoodWorld — one tap a day, the world's mood",
-  description:
-    "Pick today's mood in one tap. See how the whole world is feeling — happiest and toughest places, mood by age, and trends over time.",
+  metadataBase: new URL(SITE_URL),
+  title: OG_TITLE,
+  description: OG_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "MoodWorld" },
+  openGraph: {
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "MoodWorld",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "MoodWorld — one tap a day, the world's mood" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
