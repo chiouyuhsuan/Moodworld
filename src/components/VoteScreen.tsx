@@ -342,9 +342,14 @@ export default function VoteScreen(props: Props) {
         <div style={{ marginTop: 16, background: "#FFFFFF", borderRadius: 30, padding: "22px 20px", boxShadow: "0 14px 34px -22px rgba(90,60,120,.5)" }}>
           <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 16, color: "#2B2733", marginBottom: 14 }}>Two quick things</div>
 
-          <label style={{ display: "block", fontSize: 12, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase", letterSpacing: ".6px", marginBottom: 7 }}>
-            Where are you?
-          </label>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 7 }}>
+            <label style={{ fontSize: 12, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase", letterSpacing: ".6px" }}>
+              Where are you?
+            </label>
+            {!!country && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#C3BBCE" }}>Not right? Tap to change</span>
+            )}
+          </div>
           <div style={{ position: "relative", marginBottom: 16 }}>
             <select
               value={country}
@@ -441,7 +446,7 @@ export default function VoteScreen(props: Props) {
           <div style={{ textAlign: "center", fontSize: 11.5, color: "#B0A8BE", fontWeight: 600, marginTop: 14, lineHeight: 1.5 }}>
             Anonymous · no login · no GPS.
             <br />
-            We store only your chosen country &amp; age range.
+            Country is guessed from your connection — tap it to change. We store only your country &amp; age range.
           </div>
         </div>
       )}
