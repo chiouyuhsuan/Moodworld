@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { track } from "@vercel/analytics";
+import { trackEvent } from "@/lib/analytics";
 import TabBar, { TabId } from "@/components/TabBar";
 import VoteScreen from "@/components/VoteScreen";
 import GlobalScreen from "@/components/GlobalScreen";
@@ -17,6 +19,16 @@ const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "
 
 export default function Home() {
   const [tab, setTab] = useState<TabId>("vote");
+
+  // This is a single-page app (the tab bar never changes the URL), so
+  // page-view analytics only ever see "/". Fire a custom event per tab
+  // switch instead: GA4 (free, works immediately once NEXT_PUBLIC_GA_
+  // MEASUREMENT_ID is set) + Vercel Analytics' track() (its Custom Events
+  // report is Pro-plan only, but the call itself is harmless either way).
+  useEffect(() => {
+    trackEvent("tab_view", { tab });
+    track("tab_view", { tab });
+  }, [tab]);
 
   // vote form
   const [pick, setPick] = useState<number | null>(null);
@@ -77,6 +89,24 @@ export default function Home() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Best-effort country auto-fill from the visitor's IP (Vercel's
+  // x-vercel-ip-country header — no GPS, no third-party call, see
+  // src/app/api/geo/route.ts). Only ever fills in an empty field: uses a
+  // functional update so it can never clobber a value the "already voted
+  // today" check above or the user's own dropdown pick has set. If detection
+  // fails (local dev, VPN, etc.) `data.country` is null and the field just
+  // stays on the normal "Select country…" placeholder.
+  useEffect(() => {
+    fetch("/api/geo")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.country) {
+          setCountry((prev) => prev || data.country);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const loadStats = useCallback(async () => {
