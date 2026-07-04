@@ -13,6 +13,46 @@ import MoodFace from "@/components/MoodFace";
 
 type Search = { m?: string; c?: string; ca?: string; wa?: string; e?: string };
 
+// A single "who's feeling what" row — same visual language as the Global
+// tab's leaderboard rows (MoodFace + label + proportional bar + value), so
+// the share page reads as an extension of the app rather than a one-off
+// design. Two of these (local country, world) replace the old plain
+// side-by-side numbers.
+function StatRow({ label, value }: { label: string; value: number }) {
+  const mo = moodByLevel(value);
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 16,
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        boxShadow: "0 10px 26px -22px rgba(90,60,120,.5)",
+      }}
+    >
+      <MoodFace color={mo.color} mouth={mo.mouth} size={32} eyeMouthColor="rgba(28,22,42,.5)" />
+      <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+        <div style={{ fontSize: 11.5, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase", letterSpacing: ".4px" }}>
+          {label}
+        </div>
+        <div style={{ height: 7, background: "#F1ECF5", borderRadius: 99, marginTop: 6, overflow: "hidden" }}>
+          <div
+            style={{
+              height: "100%",
+              width: `${Math.max(4, (value / 7) * 100).toFixed(0)}%`,
+              background: mo.color,
+              borderRadius: 99,
+            }}
+          />
+        </div>
+      </div>
+      <div style={{ fontFamily: "Fredoka", fontWeight: 700, fontSize: 19, color: mo.color }}>{value.toFixed(1)}</div>
+    </div>
+  );
+}
+
 function parse(sp: Search) {
   const moodRaw = Number(sp.m);
   const mood = Number.isFinite(moodRaw) ? Math.max(1, Math.min(7, Math.round(moodRaw))) : 4;
@@ -94,19 +134,12 @@ export default async function SharePage({ searchParams }: { searchParams: Promis
         <div style={{ fontSize: 15, color: "#6B6478", fontWeight: 600, marginTop: 10, lineHeight: 1.6 }}>
           {message}
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 22 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase" }}>{country}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#2B2733" }}>
-              {countryAvg !== null ? countryAvg.toFixed(1) : "—"}/7
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase" }}>World</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#2B2733" }}>
-              {worldAvg !== null ? worldAvg.toFixed(1) : "—"}/7
-            </div>
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 22 }}>
+          {countryAvg !== null && <StatRow label={country} value={countryAvg} />}
+          {worldAvg !== null && <StatRow label="World today" value={worldAvg} />}
+          {countryAvg === null && worldAvg === null && (
+            <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700 }}>No data yet today.</div>
+          )}
         </div>
         <a
           href="/"
