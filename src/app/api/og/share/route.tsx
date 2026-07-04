@@ -93,7 +93,7 @@ export async function GET(req: Request) {
           >
             🙂
           </div>
-          <div style={{ color: "#fff", fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>MoodWorld</div>
+          <div style={{ display: "flex", color: "#fff", fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>MoodWorld</div>
         </div>
 
         {/* main row: face + numbers */}
@@ -119,12 +119,12 @@ export async function GET(req: Request) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ color: "rgba(255,255,255,.85)", fontSize: 22, fontWeight: 700 }}>
+            <div style={{ display: "flex", color: "rgba(255,255,255,.85)", fontSize: 22, fontWeight: 700 }}>
               I&apos;m feeling
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-              <div style={{ color: "#fff", fontSize: 88, fontWeight: 800, lineHeight: 1 }}>{m.label}</div>
-              <div style={{ color: "rgba(255,255,255,.8)", fontSize: 40, fontWeight: 700 }}>{mood}/7</div>
+              <div style={{ display: "flex", color: "#fff", fontSize: 88, fontWeight: 800, lineHeight: 1 }}>{m.label}</div>
+              <div style={{ display: "flex", color: "rgba(255,255,255,.8)", fontSize: 40, fontWeight: 700 }}>{mood}/7</div>
             </div>
           </div>
         </div>
@@ -142,18 +142,18 @@ export async function GET(req: Request) {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ display: "flex", fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
               {country}
             </div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
+            <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
               {countryAvg !== null ? `${countryAvg.toFixed(1)}/7` : "—"}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ display: "flex", fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
               World today
             </div>
-            <div style={{ fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
+            <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
               {worldAvg !== null ? `${worldAvg.toFixed(1)}/7` : "—"}
             </div>
           </div>
