@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { moodByLevel, SHARE_MESSAGES } from "@/lib/moods";
+import MoodFace from "@/components/MoodFace";
 
 // This is a plain Server Component (no "use client") specifically so it can
 // export generateMetadata — the root layout's metadata is static, but every
@@ -81,10 +82,12 @@ export default async function SharePage({ searchParams }: { searchParams: Promis
             width: 96,
             height: 96,
             margin: "0 auto",
+            boxShadow: `0 14px 30px -14px ${m.color}`,
             borderRadius: "50%",
-            background: `linear-gradient(155deg, ${m.color} 0%, ${m.color2} 100%)`,
           }}
-        />
+        >
+          <MoodFace color={m.color} mouth={m.mouth} size={96} />
+        </div>
         <div style={{ fontFamily: "sans-serif", fontWeight: 700, fontSize: 24, color: "#2B2733", marginTop: 18 }}>
           {country} is feeling {m.label} today
         </div>
