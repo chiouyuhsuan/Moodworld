@@ -77,7 +77,9 @@ export async function GET(req: Request) {
           }}
         />
 
-        {/* wordmark */}
+        {/* wordmark — brand mark (globe grid + face), recolored to the
+            current mood so it reads clearly against every gradient, not
+            just the default orange */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
@@ -88,10 +90,19 @@ export async function GET(req: Request) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 20,
+              overflow: "hidden",
             }}
           >
-            🙂
+            <svg width="34" height="34" viewBox="0 0 100 100">
+              <g fill="none" stroke={m.color} strokeOpacity={0.28} strokeWidth={3}>
+                <ellipse cx="50" cy="50" rx="20" ry="47" />
+                <path d="M4 32 Q50 44 96 32" />
+                <path d="M6 70 Q50 60 94 70" />
+              </g>
+              <circle cx="37" cy="43" r="6" fill={m.color} />
+              <circle cx="63" cy="43" r="6" fill={m.color} />
+              <path d="M32 60 Q50 79 68 60" fill="none" stroke={m.color} strokeWidth="7.5" strokeLinecap="round" />
+            </svg>
           </div>
           <div style={{ display: "flex", color: "#fff", fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>MoodWorld</div>
         </div>
