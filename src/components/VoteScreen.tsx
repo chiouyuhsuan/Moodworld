@@ -1,6 +1,7 @@
 "use client";
 
-import { MOODS, ENCOURAGEMENT, VOTE_HINT, moodByLevel } from "@/lib/moods";
+import { useMemo } from "react";
+import { MOODS, ENCOURAGEMENT, VOTE_HINT, moodByLevel, pickShareMessageIndex } from "@/lib/moods";
 import { COUNTRY_NAMES, AGE_RANGES, ageRangeDisplay } from "@/lib/referenceData";
 import MoodFace from "./MoodFace";
 import type { TabId } from "./TabBar";
@@ -25,7 +26,11 @@ type Props = {
   onSubmit: () => void;
   countdown: string;
   onGoTab: (t: TabId) => void;
+  countryAvg: number | null;
+  worldAverage: number | null;
 };
+
+const SITE_URL = "https://moodworld.vercel.app";
 
 export default function VoteScreen(props: Props) {
   const {
@@ -46,10 +51,41 @@ export default function VoteScreen(props: Props) {
     onSubmit,
     countdown,
     onGoTab,
+    countryAvg,
+    worldAverage,
   } = props;
 
   const hasPick = !!pick;
   const heroMood = pick ? moodByLevel(pick) : MOODS[3];
+
+  // Share card data — computed once per vote (not re-rolled on every
+  // re-render) since the encouragement message index gets baked into the
+  // share URL and should stay stable for as long as this vote is shown.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const shareData = useMemo(() => {
+    if (!voteRecord) return null;
+    const idx = pickShareMessageIndex(voteRecord.mood);
+    const m = moodByLevel(voteRecord.mood);
+    const qs = new URLSearchParams({
+      m: String(voteRecord.mood),
+      c: voteRecord.country,
+      ca: countryAvg !== null ? countryAvg.toFixed(1) : "",
+      wa: worldAverage !== null ? worldAverage.toFixed(1) : "",
+      e: String(idx),
+    }).toString();
+    const shareUrl = `${SITE_URL}/share?${qs}`;
+    const compareText =
+      countryAvg !== null && worldAverage !== null
+        ? ` ${voteRecord.country} is at ${countryAvg.toFixed(1)}/7 today (world: ${worldAverage.toFixed(1)}/7).`
+        : "";
+    const xText = `Feeling ${m.label.toLowerCase()} today — ${voteRecord.mood}/7.${compareText} How about you?`;
+    const threadsText = `Today I'm feeling ${m.label.toLowerCase()} (${voteRecord.mood}/7) 🙂${compareText} Go check in and see how you compare 👇`;
+    return {
+      shareUrl,
+      xHref: `https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(shareUrl)}`,
+      threadsHref: `https://www.threads.com/intent/post?text=${encodeURIComponent(threadsText)}&url=${encodeURIComponent(shareUrl)}`,
+    };
+  }, [voteRecord?.mood, voteRecord?.country, countryAvg, worldAverage]);
 
   if (voted && voteRecord) {
     const heroM = moodByLevel(voteRecord.mood);
@@ -142,6 +178,68 @@ export default function VoteScreen(props: Props) {
             <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 19, color: "#2B2733" }}>in {countdown}</div>
           </div>
         </div>
+
+        {shareData && (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 24,
+              padding: "18px 20px",
+              marginTop: 12,
+              boxShadow: "0 14px 34px -24px rgba(90,60,120,.5)",
+            }}
+          >
+            <div style={{ fontSize: 13.5, color: "#6B6478", fontWeight: 700, lineHeight: 1.5, marginBottom: 12 }}>
+              Share how you&apos;re doing — invite a friend to tap in too.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <a
+                href={shareData.xHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: "#000",
+                  color: "#fff",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  fontFamily: "Fredoka",
+                  textDecoration: "none",
+                }}
+              >
+                𝕏 Share
+              </a>
+              <a
+                href={shareData.threadsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  background: "#2B2733",
+                  color: "#fff",
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  fontFamily: "Fredoka",
+                  textDecoration: "none",
+                }}
+              >
+                @ Threads
+              </a>
+            </div>
+          </div>
+        )}
 
         <div
           style={{
