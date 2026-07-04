@@ -97,11 +97,11 @@ export async function GET(req: Request) {
         </div>
 
         {/* main row: face + numbers */}
-        <div style={{ display: "flex", alignItems: "center", gap: 46, marginTop: 34 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 36, marginTop: 26 }}>
           <div
             style={{
-              width: 200,
-              height: 200,
+              width: 150,
+              height: 150,
               borderRadius: 999,
               background: "rgba(255,255,255,.97)",
               display: "flex",
@@ -111,7 +111,7 @@ export async function GET(req: Request) {
               boxShadow: "0 20px 40px rgba(0,0,0,.18)",
             }}
           >
-            <svg width="120" height="120" viewBox="0 0 100 100">
+            <svg width="88" height="88" viewBox="0 0 100 100">
               <circle cx="34" cy="40" r="6.5" fill={m.color} />
               <circle cx="66" cy="40" r="6.5" fill={m.color} />
               <path d={m.mouth} stroke={m.color} strokeWidth="7" fill="none" strokeLinecap="round" />
@@ -119,12 +119,12 @@ export async function GET(req: Request) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", color: "rgba(255,255,255,.85)", fontSize: 22, fontWeight: 700 }}>
+            <div style={{ display: "flex", color: "rgba(255,255,255,.85)", fontSize: 20, fontWeight: 700 }}>
               I&apos;m feeling
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-              <div style={{ display: "flex", color: "#fff", fontSize: 88, fontWeight: 800, lineHeight: 1 }}>{m.label}</div>
-              <div style={{ display: "flex", color: "rgba(255,255,255,.8)", fontSize: 40, fontWeight: 700 }}>{mood}/7</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+              <div style={{ display: "flex", color: "#fff", fontSize: 64, fontWeight: 800, lineHeight: 1 }}>{m.label}</div>
+              <div style={{ display: "flex", color: "rgba(255,255,255,.8)", fontSize: 32, fontWeight: 700 }}>{mood}/7</div>
             </div>
           </div>
         </div>
@@ -133,40 +133,40 @@ export async function GET(req: Request) {
         <div
           style={{
             display: "flex",
-            marginTop: 32,
+            marginTop: 24,
             background: "rgba(255,255,255,.95)",
-            borderRadius: 26,
-            padding: "22px 30px",
+            borderRadius: 22,
+            padding: "16px 26px",
             alignItems: "center",
             justifyContent: "space-between",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ display: "flex", fontSize: 13, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
               {country}
             </div>
-            <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
+            <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#2B2733" }}>
               {countryAvg !== null ? `${countryAvg.toFixed(1)}/7` : "—"}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-            <div style={{ display: "flex", fontSize: 15, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ display: "flex", fontSize: 13, fontWeight: 700, color: "#9B93A6", textTransform: "uppercase", letterSpacing: 1 }}>
               World today
             </div>
-            <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#2B2733" }}>
+            <div style={{ display: "flex", fontSize: 30, fontWeight: 800, color: "#2B2733" }}>
               {worldAvg !== null ? `${worldAvg.toFixed(1)}/7` : "—"}
             </div>
           </div>
         </div>
         {compareLine && (
-          <div style={{ display: "flex", marginTop: 14, color: "rgba(255,255,255,.92)", fontSize: 20, fontWeight: 700 }}>
+          <div style={{ display: "flex", marginTop: 12, color: "rgba(255,255,255,.92)", fontSize: 18, fontWeight: 700 }}>
             {compareLine}
           </div>
         )}
 
         {/* encouragement + CTA */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: "auto", gap: 14 }}>
-          <div style={{ display: "flex", color: "#fff", fontSize: 24, fontWeight: 700, lineHeight: 1.4, maxWidth: 900 }}>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 28, gap: 16 }}>
+          <div style={{ display: "flex", color: "#fff", fontSize: 22, fontWeight: 700, lineHeight: 1.35, maxWidth: 980 }}>
             {message}
           </div>
           <div
@@ -176,8 +176,8 @@ export async function GET(req: Request) {
               background: "rgba(255,255,255,.95)",
               color: "#E85535",
               borderRadius: 999,
-              padding: "12px 26px",
-              fontSize: 22,
+              padding: "11px 24px",
+              fontSize: 19,
               fontWeight: 800,
             }}
           >
