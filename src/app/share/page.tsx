@@ -129,9 +129,25 @@ export default async function SharePage({ searchParams }: { searchParams: Promis
           <MoodFace color={m.color} mouth={m.mouth} size={96} />
         </div>
         <div style={{ fontFamily: "sans-serif", fontWeight: 700, fontSize: 24, color: "#2B2733", marginTop: 18 }}>
-          {country} is feeling {m.label} today
+          I&apos;m feeling {m.label} today
         </div>
-        <div style={{ fontSize: 15, color: "#6B6478", fontWeight: 600, marginTop: 10, lineHeight: 1.6 }}>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#F6F1F9",
+            borderRadius: 999,
+            padding: "5px 13px",
+            fontSize: 12.5,
+            fontWeight: 800,
+            color: "#6B6478",
+            marginTop: 10,
+          }}
+        >
+          📍 {country}
+        </div>
+        <div style={{ fontSize: 15, color: "#6B6478", fontWeight: 600, marginTop: 14, lineHeight: 1.6 }}>
           {message}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 22 }}>
