@@ -58,6 +58,7 @@ export default function Home() {
   const [trendRange, setTrendRange] = useState<7 | 30>(7);
   const [statsLoading, setStatsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(true);
+  const [countryAvg, setCountryAvg] = useState<number | null>(null);
 
   const fingerprint = useMemo(() => getFingerprint(), []);
   const today = todayKey(new Date(now));
@@ -108,6 +109,24 @@ export default function Home() {
       })
       .catch(() => {});
   }, []);
+
+  // Once we know which country the day's vote belongs to, fetch that
+  // country's own average (not just whether it happens to land in the
+  // top-5-each-side leaderboard — see src/app/api/stats/country/route.ts).
+  // Powers the "Taiwan: 5.7/7 vs World: 5.2/7" comparison on the share card.
+  useEffect(() => {
+    if (!voteRecord?.country) return;
+    let cancelled = false;
+    fetch(`/api/stats/country?country=${encodeURIComponent(voteRecord.country)}&date=${today}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setCountryAvg(typeof data.average === "number" ? data.average : null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [voteRecord?.country, today]);
 
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
@@ -224,6 +243,8 @@ export default function Home() {
               onSubmit={handleSubmit}
               countdown={countdown}
               onGoTab={setTab}
+              countryAvg={countryAvg}
+              worldAverage={globalStats?.average ?? null}
             />
           )}
           {tab === "global" && <GlobalScreen stats={globalStats} loading={statsLoading && !globalStats} />}
