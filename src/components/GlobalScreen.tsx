@@ -1,11 +1,53 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { moodByLevel } from "@/lib/moods";
 import MoodFace from "./MoodFace";
 import type { GlobalStats } from "@/lib/types";
 
-export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | null; loading: boolean }) {
-  if (loading || !stats) {
+type Scope = "all" | "today";
+
+// Daily volume is low enough right now that the "today" leaderboard often
+// shows just one or two countries — reads as broken to a first-time
+// visitor. Default to the All Time view (smoothed over every vote ever
+// cast) and let people flip to Today if they want the live snapshot; the
+// small "today" count stays visible in the subtitle either way so the
+// real-time angle isn't lost. See src/app/api/stats/global/route.ts for the
+// scope=all aggregation this depends on.
+export default function GlobalScreen({
+  stats,
+  loading,
+  today,
+}: {
+  stats: GlobalStats | null;
+  loading: boolean;
+  today: string;
+}) {
+  const [scope, setScope] = useState<Scope>("all");
+  const [allStats, setAllStats] = useState<GlobalStats | null>(null);
+  const [allLoading, setAllLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAllLoading(true);
+    fetch(`/api/stats/global?scope=all&date=${today}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setAllStats(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAllLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [today]);
+
+  const active = scope === "all" ? allStats : stats;
+  const activeLoading = scope === "all" ? allLoading && !allStats : loading;
+
+  if (activeLoading || !active) {
     return (
       <div style={{ padding: "58px 22px 118px" }}>
         <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>Global mood</div>
@@ -14,8 +56,9 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
     );
   }
 
-  const noData = stats.total_checkins === 0;
-  const gm = moodByLevel(noData ? 4 : stats.average);
+  const stats_ = active;
+  const noData = stats_.total_checkins === 0;
+  const gm = moodByLevel(noData ? 4 : stats_.average);
 
   const Row = ({ r, rank }: { r: { country: string; average: number; checkins: number }; rank: number }) => {
     const mo = moodByLevel(r.average);
@@ -49,12 +92,44 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
     );
   };
 
+  const todayCheckins = stats_.today_checkins ?? (scope === "today" ? stats_.total_checkins : 0);
+  const sinceLabel =
+    allStats?.since &&
+    new Date(allStats.since + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
   return (
     <div style={{ padding: "58px 22px 118px" }}>
-      <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>Global mood</div>
-      <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, marginTop: 2, marginBottom: 18 }}>
-        {stats.total_checkins.toLocaleString("en-US")} check-ins today
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div>
+          <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>Global mood</div>
+          <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, marginTop: 2 }}>
+            {scope === "all"
+              ? `${stats_.total_checkins.toLocaleString("en-US")} check-ins all time · ${todayCheckins.toLocaleString("en-US")} today`
+              : `${stats_.total_checkins.toLocaleString("en-US")} check-ins today`}
+          </div>
+        </div>
+        <div style={{ display: "flex", background: "#F6F1F9", borderRadius: 999, padding: 3, flexShrink: 0 }}>
+          {(["all", "today"] as Scope[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => setScope(s)}
+              style={{
+                padding: "7px 13px",
+                borderRadius: 999,
+                fontSize: 12.5,
+                fontWeight: 800,
+                fontFamily: "Fredoka",
+                background: scope === s ? "#2B2733" : "transparent",
+                color: scope === s ? "#fff" : "#9B93A6",
+                transition: "background .15s ease",
+              }}
+            >
+              {s === "all" ? "All Time" : "Today"}
+            </button>
+          ))}
+        </div>
       </div>
+      <div style={{ marginBottom: 18 }} />
 
       <div
         style={{
@@ -73,9 +148,11 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
             <MoodFace color="rgba(255,255,255,.96)" mouth={gm.mouth} size={86} eyeMouthColor={gm.color} />
           </div>
           <div>
-            <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: ".5px", opacity: 0.9 }}>TODAY&apos;S AVERAGE</div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: ".5px", opacity: 0.9 }}>
+              {scope === "all" ? "ALL-TIME AVERAGE" : "TODAY'S AVERAGE"}
+            </div>
             <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 46, lineHeight: 1, marginTop: 2 }}>
-              {noData ? "—" : stats.average.toFixed(1)}
+              {noData ? "—" : stats_.average.toFixed(1)}
               <span style={{ fontSize: 20, opacity: 0.7 }}> /7</span>
             </div>
             <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>
@@ -99,7 +176,9 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
             textAlign: "center",
           }}
         >
-          No one&apos;s checked in yet today — rankings and averages will fill in as votes come in.
+          {scope === "all"
+            ? "No one's checked in yet — rankings and averages will fill in as votes come in."
+            : "No one's checked in yet today — rankings and averages will fill in as votes come in."}
         </div>
       ) : (
         <>
@@ -108,10 +187,10 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
             <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 18, color: "#2B2733" }}>Happiest places</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {stats.happiest.length === 0 && (
+            {stats_.happiest.length === 0 && (
               <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700 }}>Not enough check-ins yet for a ranking.</div>
             )}
-            {stats.happiest.map((r, i) => (
+            {stats_.happiest.map((r, i) => (
               <Row key={r.country} r={r} rank={i + 1} />
             ))}
           </div>
@@ -121,7 +200,7 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
             <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 18, color: "#2B2733" }}>Toughest days</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {stats.toughest.map((r, i) => (
+            {stats_.toughest.map((r, i) => (
               <Row key={r.country} r={r} rank={i + 1} />
             ))}
           </div>
@@ -129,7 +208,9 @@ export default function GlobalScreen({ stats, loading }: { stats: GlobalStats | 
       )}
 
       <div style={{ marginTop: 18, background: "#F6F1F9", borderRadius: 16, padding: "13px 15px", fontSize: 11.5, color: "#9B93A6", fontWeight: 600, lineHeight: 1.55 }}>
-        Based on self-reported check-ins — not strictly de-duplicated, so treat it as a global vibe, not a census.
+        {scope === "all" && sinceLabel
+          ? `Based on self-reported check-ins since ${sinceLabel} — not strictly de-duplicated, so treat it as a global vibe, not a census.`
+          : "Based on self-reported check-ins — not strictly de-duplicated, so treat it as a global vibe, not a census."}
       </div>
     </div>
   );
