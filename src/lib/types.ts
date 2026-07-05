@@ -7,9 +7,12 @@ export type VoteRecord = {
 };
 
 export type GlobalStats = {
+  scope?: "today" | "all";
   date: string;
   average: number;
   total_checkins: number;
+  today_checkins?: number;
+  since?: string | null;
   happiest: { country: string; average: number; checkins: number }[];
   toughest: { country: string; average: number; checkins: number }[];
 };
