@@ -47,3 +47,13 @@ export type GiveSummary = {
   ops_pct: number;
   you: { lifetime_ads: number; funded: number; today_ads: number };
 };
+
+export type Note = {
+  id: number;
+  text: string;
+  source: "internal" | "user";
+  country: string | null;
+  mood: number | null;
+  inspiring_count: number;
+  not_helpful_count: number;
+};
