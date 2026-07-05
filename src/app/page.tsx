@@ -245,6 +245,8 @@ export default function Home() {
               onGoTab={setTab}
               countryAvg={countryAvg}
               worldAverage={globalStats?.average ?? null}
+              fingerprint={fingerprint}
+              today={today}
             />
           )}
           {tab === "global" && <GlobalScreen stats={globalStats} loading={statsLoading && !globalStats} today={today} />}
