@@ -34,7 +34,7 @@ type Props = {
 };
 
 const SITE_URL = "https://moodworld.vercel.app";
-const NOTE_MAX_LEN = 200;
+const NOTE_MAX_LEN = 50;
 
 export default function VoteScreen(props: Props) {
   const {
@@ -62,14 +62,16 @@ export default function VoteScreen(props: Props) {
   } = props;
 
   // "Note from a stranger" — a random anonymous note (curated or already
-  // manually-approved user submissions, see src/app/api/notes/random) shown
-  // after voting, with a lightweight reaction instead of open reply so this
-  // never turns into a chat between strangers. Fetched once per mount (this
-  // component remounts each time the Vote tab is revisited, so a repeat
-  // visit shows a fresh random note — reacting twice to the same note just
-  // gets a harmless 409 from the API, handled as a no-op below).
+  // manually-approved user submissions, see src/app/api/notes/random),
+  // delivered as a two-step popup rather than an always-visible card: it
+  // waits 2s after landing on the "voted" screen, then shows the note +
+  // reaction step, then (after reacting) slides straight into the "leave
+  // your own note" step. Shown at most once per day per device (tracked in
+  // localStorage) so revisiting the Vote tab later the same day doesn't
+  // re-trigger it every time this component remounts.
   const [note, setNote] = useState<Note | null>(null);
   const [noteReaction, setNoteReaction] = useState<"inspiring" | "not_helpful" | null>(null);
+  const [popupStep, setPopupStep] = useState<"hidden" | "receive" | "compose">("hidden");
 
   useEffect(() => {
     if (!fingerprint) return;
@@ -85,6 +87,20 @@ export default function VoteScreen(props: Props) {
     };
   }, [fingerprint]);
 
+  useEffect(() => {
+    if (!voted || !voteRecord || !note || !today) return;
+    const seenKey = `moodworld_note_popup_${today}`;
+    if (typeof window !== "undefined" && window.localStorage.getItem(seenKey)) return;
+    const t = setTimeout(() => {
+      setPopupStep("receive");
+      if (typeof window !== "undefined") window.localStorage.setItem(seenKey, "1");
+    }, 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voted, !!voteRecord, !!note, today]);
+
+  const closePopup = () => setPopupStep("hidden");
+
   const reactToNote = (type: "inspiring" | "not_helpful") => {
     if (!note || noteReaction) return;
     setNoteReaction(type);
@@ -93,6 +109,7 @@ export default function VoteScreen(props: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fingerprint, noteId: note.id, reaction: type }),
     }).catch(() => {});
+    setPopupStep("compose");
   };
 
   // Leave-a-note form — always starts as status='pending' server-side and
@@ -104,6 +121,8 @@ export default function VoteScreen(props: Props) {
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [noteSubmitted, setNoteSubmitted] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+
+  const skipNote = () => setPopupStep("hidden");
 
   const submitNote = async () => {
     if (!voteRecord || noteSubmitting) return;
@@ -129,10 +148,11 @@ export default function VoteScreen(props: Props) {
       const data = await res.json();
       if (data.ok || data.error === "already_submitted_today") {
         setNoteSubmitted(true);
+        setTimeout(() => setPopupStep("hidden"), 1400);
       } else if (data.error === "blocked_content") {
         setNoteError("That didn't pass our basic filter — try rewording it.");
       } else if (data.error === "invalid_length") {
-        setNoteError("Keep it between 3 and 200 characters.");
+        setNoteError(`Keep it between 3 and ${NOTE_MAX_LEN} characters.`);
       } else {
         setNoteError("Couldn't submit right now — try again later.");
       }
@@ -329,138 +349,192 @@ export default function VoteScreen(props: Props) {
           </div>
         )}
 
-        {note && (
+        {popupStep !== "hidden" && (
           <div
             style={{
-              background: "#fff",
-              borderRadius: 24,
-              padding: "18px 20px",
-              marginTop: 12,
-              boxShadow: "0 14px 34px -24px rgba(90,60,120,.5)",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(43,39,51,.45)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 22,
+              zIndex: 50,
             }}
           >
             <div
               style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#9B93A6",
-                textTransform: "uppercase",
-                letterSpacing: ".5px",
-                marginBottom: 8,
+                width: "100%",
+                maxWidth: 360,
+                background: "#fff",
+                borderRadius: 24,
+                padding: "22px 20px 20px",
+                position: "relative",
+                boxShadow: "0 30px 70px -20px rgba(0,0,0,.35)",
               }}
             >
-              💬 A note from {note.country ? `someone in ${note.country}` : "someone else"}
-              {note.mood ? `, feeling ${moodByLevel(note.mood).label.toLowerCase()}` : ""}
-            </div>
-            <div style={{ fontSize: 15, color: "#2B2733", fontWeight: 700, lineHeight: 1.55, marginBottom: 14 }}>
-              &ldquo;{note.text}&rdquo;
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => reactToNote("inspiring")}
-                disabled={!!noteReaction}
+                onClick={closePopup}
                 style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  background: noteReaction === "inspiring" ? "#F2823C" : "#FFF3E7",
-                  color: noteReaction === "inspiring" ? "#fff" : "#E85535",
-                  borderRadius: 14,
-                  padding: "11px 12px",
-                  fontSize: 13.5,
+                  position: "absolute",
+                  top: 14,
+                  right: 14,
+                  width: 26,
+                  height: 26,
+                  borderRadius: 999,
+                  background: "#F6F1F9",
+                  color: "#9B93A6",
+                  fontSize: 13,
                   fontWeight: 800,
-                  fontFamily: "Fredoka",
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
-                🌟 It&apos;s inspiring
+                ✕
               </button>
-              <button
-                onClick={() => reactToNote("not_helpful")}
-                disabled={!!noteReaction}
-                style={{
-                  flex: 1,
-                  background: noteReaction === "not_helpful" ? "#2B2733" : "#F6F1F9",
-                  color: noteReaction === "not_helpful" ? "#fff" : "#6B6478",
-                  borderRadius: 14,
-                  padding: "11px 12px",
-                  fontSize: 13.5,
-                  fontWeight: 800,
-                  fontFamily: "Fredoka",
-                }}
-              >
-                Not helpful
-              </button>
+
+              {popupStep === "receive" && note && (
+                <>
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      color: "#9B93A6",
+                      textTransform: "uppercase",
+                      letterSpacing: ".5px",
+                      marginBottom: 10,
+                      paddingRight: 26,
+                    }}
+                  >
+                    💬 A note from someone else
+                  </div>
+                  <div style={{ fontSize: 16, color: "#2B2733", fontWeight: 700, lineHeight: 1.55, marginBottom: 18 }}>
+                    &ldquo;{note.text}&rdquo;
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      onClick={() => reactToNote("inspiring")}
+                      style={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        background: "#FFF3E7",
+                        color: "#E85535",
+                        borderRadius: 14,
+                        padding: "12px 12px",
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        fontFamily: "Fredoka",
+                      }}
+                    >
+                      🌟 It&apos;s inspiring
+                    </button>
+                    <button
+                      onClick={() => reactToNote("not_helpful")}
+                      style={{
+                        flex: 1,
+                        background: "#F6F1F9",
+                        color: "#6B6478",
+                        borderRadius: 14,
+                        padding: "12px 12px",
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        fontFamily: "Fredoka",
+                      }}
+                    >
+                      Not helpful
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {popupStep === "compose" && (
+                <>
+                  <div
+                    style={{
+                      fontFamily: "Fredoka",
+                      fontWeight: 600,
+                      fontSize: 18,
+                      color: "#2B2733",
+                      lineHeight: 1.3,
+                      marginBottom: 14,
+                      paddingRight: 26,
+                    }}
+                  >
+                    Want to leave a note for the next person?
+                  </div>
+                  {noteSubmitted ? (
+                    <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, textAlign: "center", padding: "16px 0" }}>
+                      Thanks — it&apos;s in the queue for review. 💛
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value.slice(0, NOTE_MAX_LEN))}
+                        placeholder="Something kind, honest, or encouraging…"
+                        rows={2}
+                        style={{
+                          width: "100%",
+                          background: "#F6F1F9",
+                          border: "1.5px solid #ECE3F1",
+                          borderRadius: 16,
+                          padding: "12px 14px",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#2B2733",
+                          fontFamily: "inherit",
+                          resize: "none",
+                        }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                        <span style={{ fontSize: 11, color: "#C3BBCE", fontWeight: 700 }}>
+                          {noteText.length}/{NOTE_MAX_LEN}
+                        </span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            onClick={skipNote}
+                            style={{
+                              background: "#F6F1F9",
+                              color: "#6B6478",
+                              borderRadius: 12,
+                              padding: "9px 14px",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              fontFamily: "Fredoka",
+                            }}
+                          >
+                            Nahh, I&apos;m fine
+                          </button>
+                          <button
+                            onClick={submitNote}
+                            disabled={noteSubmitting || noteText.trim().length < 3}
+                            style={{
+                              background: noteText.trim().length >= 3 ? "#2B2733" : "#E4DBEC",
+                              color: "#fff",
+                              borderRadius: 12,
+                              padding: "9px 16px",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              fontFamily: "Fredoka",
+                            }}
+                          >
+                            {noteSubmitting ? "Sending…" : "Submit"}
+                          </button>
+                        </div>
+                      </div>
+                      {noteError && (
+                        <div style={{ fontSize: 12, color: "#E85535", fontWeight: 700, marginTop: 8 }}>{noteError}</div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
             </div>
-            {noteReaction && (
-              <div style={{ fontSize: 12, color: "#9B93A6", fontWeight: 700, marginTop: 10, textAlign: "center" }}>
-                Thanks for the feedback.
-              </div>
-            )}
           </div>
         )}
-
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 24,
-            padding: "18px 20px",
-            marginTop: 12,
-            boxShadow: "0 14px 34px -24px rgba(90,60,120,.5)",
-          }}
-        >
-          <div style={{ fontSize: 13.5, color: "#6B6478", fontWeight: 700, lineHeight: 1.5, marginBottom: 12 }}>
-            Leave a short note for whoever checks in next — it&apos;ll be reviewed before anyone sees it.
-          </div>
-          {noteSubmitted ? (
-            <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, textAlign: "center", padding: "6px 0" }}>
-              Thanks — it&apos;s in the queue for review. 💛
-            </div>
-          ) : (
-            <>
-              <textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value.slice(0, NOTE_MAX_LEN))}
-                placeholder="Something kind, honest, or encouraging…"
-                rows={3}
-                style={{
-                  width: "100%",
-                  background: "#F6F1F9",
-                  border: "1.5px solid #ECE3F1",
-                  borderRadius: 16,
-                  padding: "12px 14px",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#2B2733",
-                  fontFamily: "inherit",
-                  resize: "none",
-                }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                <span style={{ fontSize: 11, color: "#C3BBCE", fontWeight: 700 }}>
-                  {noteText.length}/{NOTE_MAX_LEN}
-                </span>
-                <button
-                  onClick={submitNote}
-                  disabled={noteSubmitting || noteText.trim().length < 3}
-                  style={{
-                    background: noteText.trim().length >= 3 ? "#2B2733" : "#E4DBEC",
-                    color: "#fff",
-                    borderRadius: 12,
-                    padding: "9px 18px",
-                    fontSize: 13,
-                    fontWeight: 800,
-                    fontFamily: "Fredoka",
-                  }}
-                >
-                  {noteSubmitting ? "Sending…" : "Send note"}
-                </button>
-              </div>
-              {noteError && <div style={{ fontSize: 12, color: "#E85535", fontWeight: 700, marginTop: 8 }}>{noteError}</div>}
-            </>
-          )}
-        </div>
 
         <div
           style={{
