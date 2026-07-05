@@ -3,7 +3,7 @@ import { getPool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const MAX_LEN = 200;
+const MAX_LEN = 50;
 const MIN_LEN = 3;
 
 // Deliberately basic — every submission also sits as status='pending' and
