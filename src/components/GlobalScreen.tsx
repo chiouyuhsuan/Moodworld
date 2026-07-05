@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { moodByLevel } from "@/lib/moods";
 import MoodFace from "./MoodFace";
-import type { GlobalStats } from "@/lib/types";
+import type { GlobalStats, Note } from "@/lib/types";
 
 type Scope = "all" | "today";
 
@@ -43,6 +43,24 @@ export default function GlobalScreen({
       cancelled = true;
     };
   }, [today]);
+
+  // "Best notes" leaderboard — top-reacted notes from the note-from-a-
+  // stranger feature (src/components/VoteScreen.tsx, /api/notes/*). Starts
+  // empty until reactions accumulate, so the section just doesn't render
+  // rather than showing an awkward empty state.
+  const [topNotes, setTopNotes] = useState<Note[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/notes/top?limit=8")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setTopNotes(data.notes ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const active = scope === "all" ? allStats : stats;
   const activeLoading = scope === "all" ? allLoading && !allStats : loading;
@@ -202,6 +220,38 @@ export default function GlobalScreen({
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {stats_.toughest.map((r, i) => (
               <Row key={r.country} r={r} rank={i + 1} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {topNotes.length > 0 && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "22px 2px 12px" }}>
+            <span style={{ fontSize: 15 }}>💬</span>
+            <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 18, color: "#2B2733" }}>Top notes</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {topNotes.map((n) => (
+              <div
+                key={n.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: 18,
+                  padding: "14px 16px",
+                  boxShadow: "0 10px 26px -22px rgba(90,60,120,.5)",
+                }}
+              >
+                <div style={{ fontSize: 14, color: "#2B2733", fontWeight: 700, lineHeight: 1.5 }}>
+                  &ldquo;{n.text}&rdquo;
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 800, color: "#F2823C" }}>🌟 {n.inspiring_count}</span>
+                  {n.country && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#C3BBCE" }}>· from {n.country}</span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </>

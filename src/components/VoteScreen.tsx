@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MOODS, ENCOURAGEMENT, VOTE_HINT, moodByLevel, pickShareMessageIndex } from "@/lib/moods";
 import { COUNTRY_NAMES, AGE_RANGES, ageRangeDisplay } from "@/lib/referenceData";
 import MoodFace from "./MoodFace";
 import type { TabId } from "./TabBar";
+import type { Note } from "@/lib/types";
 
 type VoteRecord = { mood: number; country: string; city: string | null; age_range: string };
 
@@ -28,9 +29,12 @@ type Props = {
   onGoTab: (t: TabId) => void;
   countryAvg: number | null;
   worldAverage: number | null;
+  fingerprint: string;
+  today: string;
 };
 
 const SITE_URL = "https://moodworld.vercel.app";
+const NOTE_MAX_LEN = 200;
 
 export default function VoteScreen(props: Props) {
   const {
@@ -53,7 +57,91 @@ export default function VoteScreen(props: Props) {
     onGoTab,
     countryAvg,
     worldAverage,
+    fingerprint,
+    today,
   } = props;
+
+  // "Note from a stranger" — a random anonymous note (curated or already
+  // manually-approved user submissions, see src/app/api/notes/random) shown
+  // after voting, with a lightweight reaction instead of open reply so this
+  // never turns into a chat between strangers. Fetched once per mount (this
+  // component remounts each time the Vote tab is revisited, so a repeat
+  // visit shows a fresh random note — reacting twice to the same note just
+  // gets a harmless 409 from the API, handled as a no-op below).
+  const [note, setNote] = useState<Note | null>(null);
+  const [noteReaction, setNoteReaction] = useState<"inspiring" | "not_helpful" | null>(null);
+
+  useEffect(() => {
+    if (!fingerprint) return;
+    let cancelled = false;
+    fetch(`/api/notes/random?fingerprint=${encodeURIComponent(fingerprint)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setNote(data.note ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [fingerprint]);
+
+  const reactToNote = (type: "inspiring" | "not_helpful") => {
+    if (!note || noteReaction) return;
+    setNoteReaction(type);
+    fetch("/api/notes/react", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fingerprint, noteId: note.id, reaction: type }),
+    }).catch(() => {});
+  };
+
+  // Leave-a-note form — always starts as status='pending' server-side and
+  // only ever becomes visible to anyone else after manual review (see
+  // src/app/api/notes/submit). One per person per day, enforced by the DB;
+  // a 409 here just means they already sent one today, so it's treated the
+  // same as a successful submit rather than shown as an error.
+  const [noteText, setNoteText] = useState("");
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [noteSubmitted, setNoteSubmitted] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+
+  const submitNote = async () => {
+    if (!voteRecord || noteSubmitting) return;
+    const trimmed = noteText.trim();
+    if (trimmed.length < 3) {
+      setNoteError("A little longer, please.");
+      return;
+    }
+    setNoteSubmitting(true);
+    setNoteError(null);
+    try {
+      const res = await fetch("/api/notes/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fingerprint,
+          date: today,
+          mood: voteRecord.mood,
+          country: voteRecord.country,
+          text: trimmed,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok || data.error === "already_submitted_today") {
+        setNoteSubmitted(true);
+      } else if (data.error === "blocked_content") {
+        setNoteError("That didn't pass our basic filter — try rewording it.");
+      } else if (data.error === "invalid_length") {
+        setNoteError("Keep it between 3 and 200 characters.");
+      } else {
+        setNoteError("Couldn't submit right now — try again later.");
+      }
+    } catch {
+      setNoteError("Couldn't reach MoodWorld — check your connection.");
+    } finally {
+      setNoteSubmitting(false);
+    }
+  };
 
   const hasPick = !!pick;
   const heroMood = pick ? moodByLevel(pick) : MOODS[3];
@@ -240,6 +328,139 @@ export default function VoteScreen(props: Props) {
             </div>
           </div>
         )}
+
+        {note && (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 24,
+              padding: "18px 20px",
+              marginTop: 12,
+              boxShadow: "0 14px 34px -24px rgba(90,60,120,.5)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "#9B93A6",
+                textTransform: "uppercase",
+                letterSpacing: ".5px",
+                marginBottom: 8,
+              }}
+            >
+              💬 A note from {note.country ? `someone in ${note.country}` : "someone else"}
+              {note.mood ? `, feeling ${moodByLevel(note.mood).label.toLowerCase()}` : ""}
+            </div>
+            <div style={{ fontSize: 15, color: "#2B2733", fontWeight: 700, lineHeight: 1.55, marginBottom: 14 }}>
+              &ldquo;{note.text}&rdquo;
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => reactToNote("inspiring")}
+                disabled={!!noteReaction}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  background: noteReaction === "inspiring" ? "#F2823C" : "#FFF3E7",
+                  color: noteReaction === "inspiring" ? "#fff" : "#E85535",
+                  borderRadius: 14,
+                  padding: "11px 12px",
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  fontFamily: "Fredoka",
+                }}
+              >
+                🌟 It&apos;s inspiring
+              </button>
+              <button
+                onClick={() => reactToNote("not_helpful")}
+                disabled={!!noteReaction}
+                style={{
+                  flex: 1,
+                  background: noteReaction === "not_helpful" ? "#2B2733" : "#F6F1F9",
+                  color: noteReaction === "not_helpful" ? "#fff" : "#6B6478",
+                  borderRadius: 14,
+                  padding: "11px 12px",
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  fontFamily: "Fredoka",
+                }}
+              >
+                Not helpful
+              </button>
+            </div>
+            {noteReaction && (
+              <div style={{ fontSize: 12, color: "#9B93A6", fontWeight: 700, marginTop: 10, textAlign: "center" }}>
+                Thanks for the feedback.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 24,
+            padding: "18px 20px",
+            marginTop: 12,
+            boxShadow: "0 14px 34px -24px rgba(90,60,120,.5)",
+          }}
+        >
+          <div style={{ fontSize: 13.5, color: "#6B6478", fontWeight: 700, lineHeight: 1.5, marginBottom: 12 }}>
+            Leave a short note for whoever checks in next — it&apos;ll be reviewed before anyone sees it.
+          </div>
+          {noteSubmitted ? (
+            <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, textAlign: "center", padding: "6px 0" }}>
+              Thanks — it&apos;s in the queue for review. 💛
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value.slice(0, NOTE_MAX_LEN))}
+                placeholder="Something kind, honest, or encouraging…"
+                rows={3}
+                style={{
+                  width: "100%",
+                  background: "#F6F1F9",
+                  border: "1.5px solid #ECE3F1",
+                  borderRadius: 16,
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#2B2733",
+                  fontFamily: "inherit",
+                  resize: "none",
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                <span style={{ fontSize: 11, color: "#C3BBCE", fontWeight: 700 }}>
+                  {noteText.length}/{NOTE_MAX_LEN}
+                </span>
+                <button
+                  onClick={submitNote}
+                  disabled={noteSubmitting || noteText.trim().length < 3}
+                  style={{
+                    background: noteText.trim().length >= 3 ? "#2B2733" : "#E4DBEC",
+                    color: "#fff",
+                    borderRadius: 12,
+                    padding: "9px 18px",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    fontFamily: "Fredoka",
+                  }}
+                >
+                  {noteSubmitting ? "Sending…" : "Send note"}
+                </button>
+              </div>
+              {noteError && <div style={{ fontSize: 12, color: "#E85535", fontWeight: 700, marginTop: 8 }}>{noteError}</div>}
+            </>
+          )}
+        </div>
 
         <div
           style={{
