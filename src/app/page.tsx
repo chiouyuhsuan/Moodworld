@@ -190,6 +190,11 @@ export default function Home() {
           age_range: data.vote.age_range ?? age,
           streak: data.streak,
         });
+        trackEvent("vote_submitted", {
+          mood: data.vote.mood,
+          country: data.vote.country ?? country,
+          streak: data.streak ?? 1,
+        });
         setTrendScope("global");
         loadStats();
       } else if (data.error === "already_voted_today" && data.vote) {
