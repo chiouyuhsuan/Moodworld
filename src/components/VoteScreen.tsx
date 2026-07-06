@@ -7,7 +7,7 @@ import MoodFace from "./MoodFace";
 import type { TabId } from "./TabBar";
 import type { Note } from "@/lib/types";
 
-type VoteRecord = { mood: number; country: string; city: string | null; age_range: string };
+type VoteRecord = { mood: number; country: string; city: string | null; age_range: string; streak?: number };
 
 type Props = {
   todayLabel: string;
@@ -186,14 +186,16 @@ export default function VoteScreen(props: Props) {
       countryAvg !== null && worldAverage !== null
         ? ` ${voteRecord.country} is at ${countryAvg.toFixed(1)}/7 today (world: ${worldAverage.toFixed(1)}/7).`
         : "";
-    const xText = `Feeling ${m.label.toLowerCase()} today — ${voteRecord.mood}/7.${compareText} How about you?`;
-    const threadsText = `Today I'm feeling ${m.label.toLowerCase()} (${voteRecord.mood}/7) 🙂${compareText} Go check in and see how you compare 👇`;
+    const streakText =
+      voteRecord.streak && voteRecord.streak >= 2 ? ` Day ${voteRecord.streak} of checking in my mood 🔥` : "";
+    const xText = `Feeling ${m.label.toLowerCase()} today — ${voteRecord.mood}/7.${compareText}${streakText} How about you?`;
+    const threadsText = `Today I'm feeling ${m.label.toLowerCase()} (${voteRecord.mood}/7) 🙂${compareText}${streakText} Go check in and see how you compare 👇`;
     return {
       shareUrl,
       xHref: `https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(shareUrl)}`,
       threadsHref: `https://www.threads.com/intent/post?text=${encodeURIComponent(threadsText)}&url=${encodeURIComponent(shareUrl)}`,
     };
-  }, [voteRecord?.mood, voteRecord?.country, countryAvg, worldAverage]);
+  }, [voteRecord?.mood, voteRecord?.country, voteRecord?.streak, countryAvg, worldAverage]);
 
   if (voted && voteRecord) {
     const heroM = moodByLevel(voteRecord.mood);
@@ -223,21 +225,41 @@ export default function VoteScreen(props: Props) {
             }}
           />
           <div style={{ position: "relative" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255,255,255,.24)",
-                borderRadius: 999,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 800,
-                color: "#fff",
-                letterSpacing: ".4px",
-              }}
-            >
-              ✓ CHECKED IN TODAY
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,.24)",
+                  borderRadius: 999,
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#fff",
+                  letterSpacing: ".4px",
+                }}
+              >
+                ✓ CHECKED IN TODAY
+              </div>
+              {!!voteRecord.streak && voteRecord.streak >= 2 && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "rgba(255,255,255,.24)",
+                    borderRadius: 999,
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#fff",
+                    letterSpacing: ".4px",
+                  }}
+                >
+                  🔥 {voteRecord.streak}-day streak
+                </div>
+              )}
             </div>
             <div style={{ width: 128, height: 128, margin: "16px auto 0" }}>
               <MoodFace color="rgba(255,255,255,.96)" mouth={heroM.mouth} size={128} eyeMouthColor={heroM.color} />
@@ -548,6 +570,9 @@ export default function VoteScreen(props: Props) {
           <div style={{ fontSize: 13.5, color: "#6B6478", fontWeight: 700, lineHeight: 1.5 }}>
             You nudged <b style={{ color: "#2B2733" }}>{voteRecord.country}</b> today. See how it&apos;s shaping the world →
           </div>
+          <div style={{ fontSize: 12, color: "#C3BBCE", fontWeight: 700, lineHeight: 1.5, marginTop: 6 }}>
+            Come back tomorrow and see if {voteRecord.country} holds its rank.
+          </div>
           <button
             onClick={() => onGoTab("global")}
             style={{
@@ -707,6 +732,8 @@ export default function VoteScreen(props: Props) {
               <button
                 key={m.level}
                 onClick={() => setPick(m.level)}
+                aria-label={m.label}
+                aria-pressed={sel}
                 style={{ display: "flex", flex: "1 1 0%", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 0, minWidth: 0 }}
               >
                 <span
