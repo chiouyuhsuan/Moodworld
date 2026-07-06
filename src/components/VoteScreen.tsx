@@ -351,6 +351,7 @@ export default function VoteScreen(props: Props) {
                 href={shareData.xHref}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent("share_click", { channel: "x" })}
                 style={{
                   flex: 1,
                   display: "flex",
@@ -373,6 +374,7 @@ export default function VoteScreen(props: Props) {
                 href={shareData.threadsHref}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent("share_click", { channel: "threads" })}
                 style={{
                   flex: 1,
                   display: "flex",
