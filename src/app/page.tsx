@@ -12,7 +12,7 @@ import GiveScreen from "@/components/GiveScreen";
 import { getFingerprint, todayKey } from "@/lib/fingerprint";
 import type { GlobalStats, AgeStats, DistributionStats, TrendStats, GiveSummary } from "@/lib/types";
 
-type VoteRecord = { mood: number; country: string; city: string | null; age_range: string };
+type VoteRecord = { mood: number; country: string; city: string | null; age_range: string; streak?: number };
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -73,7 +73,7 @@ export default function Home() {
         if (cancelled) return;
         if (data.voted) {
           setVoted(true);
-          setVoteRecord(data.vote);
+          setVoteRecord({ ...data.vote, streak: data.streak });
           setPick(data.vote.mood);
           setCountry(data.vote.country);
           setCity(data.vote.city || "");
@@ -183,12 +183,18 @@ export default function Home() {
       const data = await res.json();
       if (data.ok) {
         setVoted(true);
-        setVoteRecord({ mood: data.vote.mood, country: data.vote.country ?? country, city: data.vote.city ?? (city || null), age_range: data.vote.age_range ?? age });
+        setVoteRecord({
+          mood: data.vote.mood,
+          country: data.vote.country ?? country,
+          city: data.vote.city ?? (city || null),
+          age_range: data.vote.age_range ?? age,
+          streak: data.streak,
+        });
         setTrendScope("global");
         loadStats();
       } else if (data.error === "already_voted_today" && data.vote) {
         setVoted(true);
-        setVoteRecord(data.vote);
+        setVoteRecord({ ...data.vote, streak: data.streak });
       } else {
         setSubmitError("Something went wrong — please try again.");
       }
