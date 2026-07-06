@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { MOODS, ENCOURAGEMENT, VOTE_HINT, moodByLevel, pickShareMessageIndex } from "@/lib/moods";
 import { COUNTRY_NAMES, AGE_RANGES, ageRangeDisplay } from "@/lib/referenceData";
 import MoodFace from "./MoodFace";
@@ -93,17 +94,25 @@ export default function VoteScreen(props: Props) {
     if (typeof window !== "undefined" && window.localStorage.getItem(seenKey)) return;
     const t = setTimeout(() => {
       setPopupStep("receive");
+      trackEvent("note_popup_shown");
       if (typeof window !== "undefined") window.localStorage.setItem(seenKey, "1");
     }, 2000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voted, !!voteRecord, !!note, today]);
 
-  const closePopup = () => setPopupStep("hidden");
+  // Only reactions and submissions leave a DB row — closing the ✕ without
+  // doing either leaves zero server-side trace otherwise, so "why is the
+  // reaction count low" is unanswerable without these two client events.
+  const closePopup = () => {
+    trackEvent("note_popup_dismissed", { step: popupStep, reacted: noteReaction ?? "none" });
+    setPopupStep("hidden");
+  };
 
   const reactToNote = (type: "inspiring" | "not_helpful") => {
     if (!note || noteReaction) return;
     setNoteReaction(type);
+    trackEvent("note_reaction", { type });
     fetch("/api/notes/react", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,7 +131,10 @@ export default function VoteScreen(props: Props) {
   const [noteSubmitted, setNoteSubmitted] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
 
-  const skipNote = () => setPopupStep("hidden");
+  const skipNote = () => {
+    trackEvent("note_skipped");
+    setPopupStep("hidden");
+  };
 
   const submitNote = async () => {
     if (!voteRecord || noteSubmitting) return;
@@ -148,6 +160,7 @@ export default function VoteScreen(props: Props) {
       const data = await res.json();
       if (data.ok || data.error === "already_submitted_today") {
         setNoteSubmitted(true);
+        trackEvent("note_submitted");
         setTimeout(() => setPopupStep("hidden"), 1400);
       } else if (data.error === "blocked_content") {
         setNoteError("That didn't pass our basic filter — try rewording it.");
@@ -225,41 +238,21 @@ export default function VoteScreen(props: Props) {
             }}
           />
           <div style={{ position: "relative" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "rgba(255,255,255,.24)",
-                  borderRadius: 999,
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#fff",
-                  letterSpacing: ".4px",
-                }}
-              >
-                ✓ CHECKED IN TODAY
-              </div>
-              {!!voteRecord.streak && voteRecord.streak >= 2 && (
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "rgba(255,255,255,.24)",
-                    borderRadius: 999,
-                    padding: "6px 14px",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    color: "#fff",
-                    letterSpacing: ".4px",
-                  }}
-                >
-                  🔥 {voteRecord.streak}-day streak
-                </div>
-              )}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "rgba(255,255,255,.24)",
+                borderRadius: 999,
+                padding: "6px 14px",
+                fontSize: 12,
+                fontWeight: 800,
+                color: "#fff",
+                letterSpacing: ".4px",
+              }}
+            >
+              ✓ CHECKED IN TODAY
             </div>
             <div style={{ width: 128, height: 128, margin: "16px auto 0" }}>
               <MoodFace color="rgba(255,255,255,.96)" mouth={heroM.mouth} size={128} eyeMouthColor={heroM.color} />
@@ -273,12 +266,43 @@ export default function VoteScreen(props: Props) {
           </div>
         </div>
 
+        {!!voteRecord.streak && voteRecord.streak >= 2 && (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: "13px 18px",
+              marginTop: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              boxShadow: "0 10px 26px -22px rgba(90,60,120,.5)",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#2B2733", whiteSpace: "nowrap" }}>
+              🔥 {voteRecord.streak}-day streak
+            </div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: 7 }).map((_, i) => {
+                const posInCycle = ((voteRecord.streak! - 1) % 7) + 1;
+                const lit = i < posInCycle;
+                return (
+                  <span key={i} style={{ fontSize: 15, lineHeight: 1, color: lit ? "#F2823C" : "#E7E0EE" }}>
+                    ★
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div
           style={{
             background: "#fff",
             borderRadius: 24,
             padding: "18px 20px",
-            marginTop: 14,
+            marginTop: 12,
             display: "flex",
             alignItems: "center",
             gap: 14,
