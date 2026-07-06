@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { AGE_RANGES, COUNTRY_NAMES } from "@/lib/referenceData";
+import { getStreak } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       [date, moodNum, country, cityVal, age_range, fingerprint]
     );
     const row = res.rows[0];
+    const streak = await getStreak(pool, fingerprint, date);
     return NextResponse.json(
       {
         ok: true,
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
           city: row.city,
           age_range: row.age_range,
         },
+        streak,
       },
       { status: 201 }
     );
@@ -64,6 +67,7 @@ export async function POST(req: NextRequest) {
         [fingerprint, date]
       );
       const row = existing.rows[0];
+      const streak = await getStreak(pool, fingerprint, date);
       return NextResponse.json(
         {
           ok: false,
@@ -71,6 +75,7 @@ export async function POST(req: NextRequest) {
           vote: row
             ? { mood: row.mood, date: row.vote_date, country: row.country, city: row.city, age_range: row.age_range }
             : undefined,
+          streak,
         },
         { status: 409 }
       );
