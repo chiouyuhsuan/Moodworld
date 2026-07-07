@@ -7,6 +7,7 @@ import { COUNTRY_NAMES, AGE_RANGES, ageRangeDisplay } from "@/lib/referenceData"
 import MoodFace from "./MoodFace";
 import type { TabId } from "./TabBar";
 import type { Note } from "@/lib/types";
+import type { SurveyCodeConfig } from "@/lib/surveyCodes";
 
 type VoteRecord = { mood: number; country: string; city: string | null; age_range: string; streak?: number };
 
@@ -32,6 +33,8 @@ type Props = {
   worldAverage: number | null;
   fingerprint: string;
   today: string;
+  surveyCard: SurveyCodeConfig | null;
+  onCloseSurveyCard: () => void;
 };
 
 const SITE_URL = "https://moodworld.vercel.app";
@@ -60,7 +63,18 @@ export default function VoteScreen(props: Props) {
     worldAverage,
     fingerprint,
     today,
+    surveyCard,
+    onCloseSurveyCard,
   } = props;
+
+  const [codeCopied, setCodeCopied] = useState(false);
+  const copySurveyCode = () => {
+    if (!surveyCard) return;
+    navigator.clipboard?.writeText(surveyCard.code).catch(() => {});
+    trackEvent("survey_code_copied", { platform: surveyCard.label });
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1800);
+  };
 
   // "Note from a stranger" — a random anonymous note (curated or already
   // manually-approved user submissions, see src/app/api/notes/random),
@@ -265,6 +279,105 @@ export default function VoteScreen(props: Props) {
             </div>
           </div>
         </div>
+
+        {surveyCard && (
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: "16px 18px",
+              marginTop: 12,
+              position: "relative",
+              boxShadow: "0 10px 26px -22px rgba(90,60,120,.5)",
+            }}
+          >
+            <button
+              onClick={onCloseSurveyCard}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                background: "#F6F1F9",
+                color: "#9B93A6",
+                fontSize: 12,
+                fontWeight: 800,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              ✕
+            </button>
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "#9B93A6",
+                textTransform: "uppercase",
+                letterSpacing: ".5px",
+                marginBottom: 8,
+                paddingRight: 26,
+              }}
+            >
+              🎟️ {surveyCard.label} reward
+            </div>
+            <div style={{ fontSize: 13, color: "#2B2733", fontWeight: 600, lineHeight: 1.5, marginBottom: 12 }}>
+              {surveyCard.message}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "#F6F1F9",
+                borderRadius: 12,
+                padding: "10px 12px",
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ flex: 1, fontFamily: "Fredoka", fontWeight: 700, fontSize: 14.5, color: "#2B2733", letterSpacing: ".3px" }}>
+                {surveyCard.code}
+              </div>
+              <button
+                onClick={copySurveyCode}
+                style={{
+                  background: "#2B2733",
+                  color: "#fff",
+                  borderRadius: 10,
+                  padding: "7px 12px",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  fontFamily: "Fredoka",
+                  flexShrink: 0,
+                }}
+              >
+                {codeCopied ? "Copied!" : "Copy code"}
+              </button>
+            </div>
+            <a
+              href={surveyCard.redeemUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("survey_redeem_click", { platform: surveyCard.label })}
+              style={{
+                display: "block",
+                textAlign: "center",
+                background: "#F2823C",
+                color: "#fff",
+                borderRadius: 12,
+                padding: "11px",
+                fontSize: 13.5,
+                fontWeight: 800,
+                fontFamily: "Fredoka",
+                textDecoration: "none",
+              }}
+            >
+              Redeem on {surveyCard.label} →
+            </a>
+          </div>
+        )}
 
         {!!voteRecord.streak && voteRecord.streak >= 2 && (
           <div
