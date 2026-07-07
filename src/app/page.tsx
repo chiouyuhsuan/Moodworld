@@ -10,6 +10,7 @@ import AgesScreen from "@/components/AgesScreen";
 import TrendsScreen from "@/components/TrendsScreen";
 import GiveScreen from "@/components/GiveScreen";
 import { getFingerprint, todayKey } from "@/lib/fingerprint";
+import { SURVEY_CODES, type SurveyCodeConfig } from "@/lib/surveyCodes";
 import type { GlobalStats, AgeStats, DistributionStats, TrendStats, GiveSummary } from "@/lib/types";
 
 type VoteRecord = { mood: number; country: string; city: string | null; age_range: string; streak?: number };
@@ -40,6 +41,14 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [checkingVoted, setCheckingVoted] = useState(true);
+
+  // Survey-exchange platform redeem card (SurveyCircle etc. — src/lib/
+  // surveyCodes.ts). A visitor landing with ?ref=<key> gets a one-time
+  // localStorage flag; general visitors never see this at all since the
+  // flag never exists without that param. The flag is consumed (cleared)
+  // the first time it's actually shown on the voted screen below, so a
+  // later revisit without the param stays clean.
+  const [surveyCard, setSurveyCard] = useState<SurveyCodeConfig | null>(null);
 
   // ticking clock for the countdown
   const [now, setNow] = useState(() => Date.now());
@@ -91,6 +100,31 @@ export default function Home() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Detect ?ref=<platform> once on mount and write the flag if it's a
+  // platform we know about. Deliberately not tied to `today` — this should
+  // fire exactly once per referred click-through, not reappear daily.
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref && SURVEY_CODES[ref]) {
+      window.localStorage.setItem("mw_ref", ref);
+    }
+  }, []);
+
+  // Reveal the redeem card once the visitor is in the "voted" state —
+  // covers both a vote completed just now and an already-voted-today
+  // visitor who lands with the ?ref= param later the same day. Clearing
+  // the flag here (not on close) is what satisfies "shown once, never
+  // again"; the close button only needs to hide the already-rendered card.
+  useEffect(() => {
+    if (!voted) return;
+    const ref = window.localStorage.getItem("mw_ref");
+    if (ref && SURVEY_CODES[ref]) {
+      setSurveyCard(SURVEY_CODES[ref]);
+      trackEvent("survey_card_shown", { platform: ref });
+      window.localStorage.removeItem("mw_ref");
+    }
+  }, [voted]);
 
   // Best-effort country auto-fill from the visitor's IP (Vercel's
   // x-vercel-ip-country header — no GPS, no third-party call, see
@@ -258,6 +292,8 @@ export default function Home() {
               worldAverage={globalStats?.average ?? null}
               fingerprint={fingerprint}
               today={today}
+              surveyCard={surveyCard}
+              onCloseSurveyCard={() => setSurveyCard(null)}
             />
           )}
           {tab === "global" && <GlobalScreen stats={globalStats} loading={statsLoading && !globalStats} today={today} />}
