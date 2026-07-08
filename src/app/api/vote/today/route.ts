@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
-import { getStreak } from "@/lib/streak";
+import { getCheckinStats } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +24,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ voted: false });
   }
   const row = res.rows[0];
-  const streak = await getStreak(pool, fingerprint, date);
+  const { cycle, justCompletedCycle } = await getCheckinStats(pool, fingerprint);
   return NextResponse.json({
     voted: true,
     vote: { mood: row.mood, country: row.country, city: row.city, age_range: row.age_range },
-    streak,
+    streak: cycle,
+    justCompletedCycle,
   });
 }
