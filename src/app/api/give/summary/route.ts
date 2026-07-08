@@ -42,7 +42,17 @@ export async function GET(req: NextRequest) {
     today_ads = todayRes.rows[0].c;
   }
 
-  const checkin_giving = await getCheckinGivingSummary(pool, month, fingerprint || undefined);
+  // Defensive: falls back to a safe zeroed summary if checkin_donations
+  // hasn't been migrated onto the live DB yet (see db/schema.sql), so a
+  // pending migration can never take down the rest of this endpoint —
+  // Global/Ages/Trends all load via the same Promise.all as this summary.
+  let checkin_giving;
+  try {
+    checkin_giving = await getCheckinGivingSummary(pool, month, fingerprint || undefined);
+  } catch (err) {
+    console.error("getCheckinGivingSummary failed (has db/schema.sql's checkin_donations table been created?)", err);
+    checkin_giving = { raised_this_month: 0, monthly_cap: 3000, cap_reached: false, you_this_month: 0 };
+  }
 
   return NextResponse.json({
     raised_this_month: Number(totalRes.rows[0].raised),
