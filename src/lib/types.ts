@@ -40,12 +40,20 @@ export type TrendStats = {
   delta: number;
 };
 
+export type CheckinGivingSummary = {
+  raised_this_month: number; // capped at monthly_cap — the honest, payable figure
+  monthly_cap: number;
+  cap_reached: boolean;
+  you_this_month: number; // this device's own pledge count this month
+};
+
 export type GiveSummary = {
   raised_this_month: number;
   monthly_goal: number;
   donated_pct: number;
   ops_pct: number;
   you: { lifetime_ads: number; funded: number; today_ads: number };
+  checkin_giving: CheckinGivingSummary;
 };
 
 export type Note = {
