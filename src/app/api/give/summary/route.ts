@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
+import { getCheckinGivingSummary } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,14 @@ export async function GET(req: NextRequest) {
     today_ads = todayRes.rows[0].c;
   }
 
+  const checkin_giving = await getCheckinGivingSummary(pool, month, fingerprint || undefined);
+
   return NextResponse.json({
     raised_this_month: Number(totalRes.rows[0].raised),
     monthly_goal: MONTHLY_GOAL,
     donated_pct: DONATED_PCT,
     ops_pct: OPS_PCT,
     you: { lifetime_ads, funded, today_ads },
+    checkin_giving,
   });
 }
