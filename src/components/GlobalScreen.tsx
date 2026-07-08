@@ -51,7 +51,7 @@ export default function GlobalScreen({
   const [topNotes, setTopNotes] = useState<Note[]>([]);
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/notes/top?limit=8")
+    fetch("/api/notes/top?limit=3")
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) setTopNotes(data.notes ?? []);
