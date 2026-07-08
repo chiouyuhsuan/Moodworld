@@ -49,7 +49,12 @@ export async function POST(req: NextRequest) {
       // never blocks/breaks the vote response — the vote itself already
       // succeeded and must not be rolled back over a giving-ledger hiccup.
       try {
-        await recordCheckinDonation(pool, fingerprint, row.id, row.vote_date);
+        // Use the original request `date` string, not row.vote_date — pg
+        // returns DATE columns as JS Date objects, which have no .slice()
+        // and silently broke this via the catch below (see 2026-07-08 log:
+        // "recordCheckinDonation failed TypeError: n.slice is not a
+        // function"). `date` was already regex-validated as YYYY-MM-DD above.
+        await recordCheckinDonation(pool, fingerprint, row.id, date);
       } catch (err) {
         console.error("recordCheckinDonation failed", err);
       }
