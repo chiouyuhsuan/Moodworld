@@ -87,3 +87,21 @@ CREATE TABLE IF NOT EXISTS note_reactions (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (note_id, fingerprint)
 );
+
+-- check-in giving: every 7th cumulative check-in (streak cycle complete,
+-- see src/lib/streak.ts) pledges 1 TWD. One row per pledge event — an
+-- honest, uncapped ledger. The site-wide monthly 3000 TWD cap is applied
+-- only when *reading* totals (getCheckinGivingSummary), never at insert
+-- time, so the ledger always reflects real cycle-completions even past
+-- what actually gets donated that month. Real payout is manual (no payment
+-- integration), same model as ad_events/payouts.
+CREATE TABLE IF NOT EXISTS checkin_donations (
+  id            BIGSERIAL   PRIMARY KEY,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  credit_month  TEXT        NOT NULL,              -- 'YYYY-MM', from the completing vote's local vote_date
+  fingerprint   TEXT        NOT NULL,
+  vote_id       BIGINT      REFERENCES votes(id) ON DELETE SET NULL,
+  amount        NUMERIC(10,2) NOT NULL DEFAULT 1.00
+);
+CREATE INDEX IF NOT EXISTS checkin_donations_month_idx ON checkin_donations (credit_month);
+CREATE INDEX IF NOT EXISTS checkin_donations_fingerprint_idx ON checkin_donations (fingerprint);
