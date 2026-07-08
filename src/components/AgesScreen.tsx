@@ -2,6 +2,7 @@
 
 import { moodByLevel } from "@/lib/moods";
 import { ageRangeDisplay } from "@/lib/referenceData";
+import { trackEvent } from "@/lib/analytics";
 import MoodFace from "./MoodFace";
 import type { AgeStats } from "@/lib/types";
 import type { TabId } from "./TabBar";
@@ -151,7 +152,10 @@ export default function AgesScreen({
             Check in today to see how your mood stacks up against your age group.
           </div>
           <button
-            onClick={() => onGoTab("vote")}
+            onClick={() => {
+              trackEvent("age_checkin_cta_click");
+              onGoTab("vote");
+            }}
             style={{ marginTop: 14, background: "#2B2733", color: "#fff", borderRadius: 14, padding: "12px 22px", fontSize: 14, fontWeight: 800, fontFamily: "Fredoka" }}
           >
             Check in

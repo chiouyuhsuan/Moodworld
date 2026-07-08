@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { moodByLevel } from "@/lib/moods";
+import { trackEvent } from "@/lib/analytics";
 import MoodFace from "./MoodFace";
 import type { GlobalStats, Note } from "@/lib/types";
 
@@ -130,7 +131,10 @@ export default function GlobalScreen({
           {(["all", "today"] as Scope[]).map((s) => (
             <button
               key={s}
-              onClick={() => setScope(s)}
+              onClick={() => {
+                trackEvent("global_scope_toggle", { scope: s });
+                setScope(s);
+              }}
               style={{
                 padding: "7px 13px",
                 borderRadius: 999,

@@ -2,6 +2,7 @@
 
 import { MOODS, moodByLevel } from "@/lib/moods";
 import { CONTINENTS } from "@/lib/referenceData";
+import { trackEvent } from "@/lib/analytics";
 import MoodFace from "./MoodFace";
 import type { TrendStats, DistributionStats } from "@/lib/types";
 
@@ -117,7 +118,10 @@ export default function TrendsScreen({
           return (
             <button
               key={r}
-              onClick={() => setTrendRange(r as 7 | 30)}
+              onClick={() => {
+                trackEvent("trend_range_toggle", { range: r });
+                setTrendRange(r as 7 | 30);
+              }}
               style={{
                 flex: 1,
                 padding: 10,
@@ -168,7 +172,10 @@ export default function TrendsScreen({
             return (
               <button
                 key={d.id}
-                onClick={() => setTrendScope(d.id)}
+                onClick={() => {
+                  trackEvent("trend_scope_change", { scope: d.id });
+                  setTrendScope(d.id);
+                }}
                 style={{
                   padding: "9px 15px",
                   borderRadius: 999,

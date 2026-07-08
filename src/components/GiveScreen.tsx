@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { GiveSummary } from "@/lib/types";
 import { adsConfigured, showRewardedAd } from "@/lib/ads";
+import { trackEvent } from "@/lib/analytics";
 
 type Props = {
   summary: GiveSummary | null;
@@ -29,10 +30,12 @@ export default function GiveScreen({ summary, fingerprint, today, onCredited }: 
 
   const handleWatchAd = async () => {
     if (!configured || status === "loading") return;
+    trackEvent("give_ad_tap");
     setStatus("loading");
     try {
       const result = await showRewardedAd();
       if (!result.completed || !result.token) {
+        trackEvent("give_ad_result", { result: "no_fill" });
         setStatus("no-fill");
         return;
       }
@@ -42,12 +45,15 @@ export default function GiveScreen({ summary, fingerprint, today, onCredited }: 
         body: JSON.stringify({ fingerprint, date: today, ad_network: "web", verification: result.token }),
       });
       if (res.ok) {
+        trackEvent("give_ad_result", { result: "credited" });
         setStatus("idle");
         onCredited();
       } else {
+        trackEvent("give_ad_result", { result: "error" });
         setStatus("error");
       }
     } catch {
+      trackEvent("give_ad_result", { result: "error" });
       setStatus("error");
     }
   };

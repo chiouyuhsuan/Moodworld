@@ -774,7 +774,10 @@ export default function VoteScreen(props: Props) {
             Come back tomorrow and see if {voteRecord.country} holds its rank.
           </div>
           <button
-            onClick={() => onGoTab("global")}
+            onClick={() => {
+              trackEvent("explore_data_click");
+              onGoTab("global");
+            }}
             style={{
               marginTop: 12,
               width: "100%",
@@ -931,7 +934,10 @@ export default function VoteScreen(props: Props) {
             return (
               <button
                 key={m.level}
-                onClick={() => setPick(m.level)}
+                onClick={() => {
+                  trackEvent("mood_pick", { mood: m.level });
+                  setPick(m.level);
+                }}
                 aria-label={m.label}
                 aria-pressed={sel}
                 style={{ display: "flex", flex: "1 1 0%", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 0, minWidth: 0 }}
