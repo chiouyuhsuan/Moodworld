@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { AGE_RANGES, COUNTRY_NAMES } from "@/lib/referenceData";
-import { getStreak } from "@/lib/streak";
+import { getCheckinStats, recordCheckinDonation } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,17 @@ export async function POST(req: NextRequest) {
       [date, moodNum, country, cityVal, age_range, fingerprint]
     );
     const row = res.rows[0];
-    const streak = await getStreak(pool, fingerprint, date);
+    const { cycle, justCompletedCycle } = await getCheckinStats(pool, fingerprint);
+    if (justCompletedCycle) {
+      // Fire-and-forget-safe: awaited so a failure surfaces in logs, but
+      // never blocks/breaks the vote response — the vote itself already
+      // succeeded and must not be rolled back over a giving-ledger hiccup.
+      try {
+        await recordCheckinDonation(pool, fingerprint, row.id, row.vote_date);
+      } catch (err) {
+        console.error("recordCheckinDonation failed", err);
+      }
+    }
     return NextResponse.json(
       {
         ok: true,
@@ -55,7 +65,8 @@ export async function POST(req: NextRequest) {
           city: row.city,
           age_range: row.age_range,
         },
-        streak,
+        streak: cycle,
+        justCompletedCycle,
       },
       { status: 201 }
     );
@@ -67,7 +78,7 @@ export async function POST(req: NextRequest) {
         [fingerprint, date]
       );
       const row = existing.rows[0];
-      const streak = await getStreak(pool, fingerprint, date);
+      const { cycle, justCompletedCycle } = await getCheckinStats(pool, fingerprint);
       return NextResponse.json(
         {
           ok: false,
@@ -75,7 +86,8 @@ export async function POST(req: NextRequest) {
           vote: row
             ? { mood: row.mood, date: row.vote_date, country: row.country, city: row.city, age_range: row.age_range }
             : undefined,
-          streak,
+          streak: cycle,
+          justCompletedCycle,
         },
         { status: 409 }
       );
