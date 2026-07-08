@@ -19,6 +19,11 @@ export default function GiveScreen({ summary, fingerprint, today, onCredited }: 
   const opsPct = summary?.ops_pct ?? 35;
   const you = summary?.you;
 
+  const checkin = summary?.checkin_giving;
+  const checkinCap = checkin?.monthly_cap ?? 3000;
+  const checkinRaised = checkin?.raised_this_month ?? 0;
+  const checkinPct = Math.min(100, (checkinRaised / checkinCap) * 100);
+
   const configured = adsConfigured();
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "no-fill">("idle");
 
@@ -174,6 +179,34 @@ export default function GiveScreen({ summary, fingerprint, today, onCredited }: 
         </div>
       )}
 
+      <div style={{ background: "#fff", borderRadius: 26, padding: 20, marginTop: 12, boxShadow: "0 16px 36px -24px rgba(90,60,120,.5)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#9B93A6", textTransform: "uppercase", letterSpacing: ".5px" }}>
+            Check-in giving
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#F2823C" }}>{Math.round(checkinPct)}%</div>
+        </div>
+        <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 34, color: "#2B2733", marginTop: 4 }}>
+          NT${checkinRaised.toLocaleString("en-US")}
+        </div>
+        <div style={{ height: 10, background: "#F1ECF5", borderRadius: 99, marginTop: 10, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${checkinPct}%`, background: "linear-gradient(90deg,#F5A63B,#EE6B4D)", borderRadius: 99 }} />
+        </div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#9B93A6", marginTop: 8 }}>
+          of NT${checkinCap.toLocaleString("en-US")} monthly cap · NT$1 pledged every 7 check-ins, from everyone worldwide
+        </div>
+        {checkin?.cap_reached && (
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#E85535", marginTop: 8, lineHeight: 1.5 }}>
+            This month&apos;s cap is reached — thank you for all the check-ins. 💛
+          </div>
+        )}
+        {!!checkin && checkin.you_this_month > 0 && (
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#F2823C", marginTop: 8 }}>
+            You&apos;ve personally triggered {checkin.you_this_month} × NT$1 this month
+          </div>
+        )}
+      </div>
+
       <div style={{ background: "#fff", borderRadius: 22, padding: 20, marginTop: 12, boxShadow: "0 14px 32px -26px rgba(90,60,120,.5)" }}>
         <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 16, color: "#2B2733" }}>Where your good goes</div>
         <div style={{ fontSize: 13.5, fontWeight: 600, color: "#6B6478", lineHeight: 1.55, marginTop: 6 }}>
@@ -186,7 +219,8 @@ export default function GiveScreen({ summary, fingerprint, today, onCredited }: 
         <div style={{ fontSize: 12.5, fontWeight: 600, color: "#8A8296", lineHeight: 1.6, marginTop: 6 }}>
           This is ad revenue, not a guaranteed donation. We keep a share to run MoodWorld and donate the rest — we can&apos;t promise
           every cent goes out. We publish the totals and the split each month.
-          {!configured && " (Ads aren't live yet — the split below is the plan, not a current payout.)"}
+          {!configured && " (Ads aren't live yet — the split below is the plan, not a current payout.)"} Check-in giving above is
+          a pledge tracked from real check-ins, capped and fulfilled by hand each month — not an automatic payment.
         </div>
         <div style={{ display: "flex", height: 14, borderRadius: 99, overflow: "hidden", marginTop: 14 }}>
           <div style={{ width: `${donatedPct}%`, background: "#F2823C" }} />

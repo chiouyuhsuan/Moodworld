@@ -9,7 +9,14 @@ import type { TabId } from "./TabBar";
 import type { Note } from "@/lib/types";
 import type { SurveyCodeConfig } from "@/lib/surveyCodes";
 
-type VoteRecord = { mood: number; country: string; city: string | null; age_range: string; streak?: number };
+type VoteRecord = {
+  mood: number;
+  country: string;
+  city: string | null;
+  age_range: string;
+  streak?: number;
+  justCompletedCycle?: boolean;
+};
 
 type Props = {
   todayLabel: string;
@@ -190,6 +197,18 @@ export default function VoteScreen(props: Props) {
     }
   };
 
+  // "Check-in giving" impression — fires once when the completed-cycle
+  // banner actually renders (see the "voted" branch below), not on every
+  // re-render. justCompletedCycle is recomputed server-side from the total
+  // check-in count, so it stays true for the rest of that calendar day
+  // (consistent with re-visiting the Vote tab after already voting today).
+  useEffect(() => {
+    if (voted && voteRecord?.justCompletedCycle) {
+      trackEvent("checkin_give_shown");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voted, voteRecord?.justCompletedCycle]);
+
   const hasPick = !!pick;
   const heroMood = pick ? moodByLevel(pick) : MOODS[3];
 
@@ -214,7 +233,7 @@ export default function VoteScreen(props: Props) {
         ? ` ${voteRecord.country} is at ${countryAvg.toFixed(1)}/7 today (world: ${worldAverage.toFixed(1)}/7).`
         : "";
     const streakText =
-      voteRecord.streak && voteRecord.streak >= 2 ? ` Day ${voteRecord.streak} of checking in my mood 🔥` : "";
+      voteRecord.streak && voteRecord.streak >= 2 ? ` Check-in ${voteRecord.streak} of 7 for me 🔥` : "";
     const xText = `Feeling ${m.label.toLowerCase()} today — ${voteRecord.mood}/7.${compareText}${streakText} How about you?`;
     const threadsText = `Today I'm feeling ${m.label.toLowerCase()} (${voteRecord.mood}/7) 🙂${compareText}${streakText} Go check in and see how you compare 👇`;
     return {
@@ -394,12 +413,11 @@ export default function VoteScreen(props: Props) {
             }}
           >
             <div style={{ fontSize: 13, fontWeight: 800, color: "#2B2733", whiteSpace: "nowrap" }}>
-              🔥 {voteRecord.streak}-day streak
+              ✓ Check-in {voteRecord.streak} of 7
             </div>
             <div style={{ display: "flex", gap: 4 }}>
               {Array.from({ length: 7 }).map((_, i) => {
-                const posInCycle = ((voteRecord.streak! - 1) % 7) + 1;
-                const lit = i < posInCycle;
+                const lit = i < voteRecord.streak!;
                 return (
                   <span key={i} style={{ fontSize: 15, lineHeight: 1, color: lit ? "#F2823C" : "#E7E0EE" }}>
                     ★
@@ -407,6 +425,49 @@ export default function VoteScreen(props: Props) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {voteRecord.justCompletedCycle && (
+          <div
+            style={{
+              background: "linear-gradient(150deg,#FFF3E7,#FCEAF0)",
+              borderRadius: 20,
+              padding: "14px 16px",
+              marginTop: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              boxShadow: "0 10px 26px -22px rgba(90,60,120,.5)",
+            }}
+          >
+            <div style={{ fontSize: 24, flexShrink: 0 }}>🎉</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#2B2733", lineHeight: 1.45 }}>
+                You&apos;ve contributed 1 TWD to the world.
+              </div>
+              <div style={{ fontSize: 11, color: "#9B93A6", fontWeight: 700, marginTop: 2, lineHeight: 1.4 }}>
+                Every 7 check-ins, MoodWorld gives a little back.
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                trackEvent("checkin_give_cta_click");
+                onGoTab("give");
+              }}
+              style={{
+                background: "#EE6B4D",
+                color: "#fff",
+                borderRadius: 12,
+                padding: "9px 13px",
+                fontSize: 12.5,
+                fontWeight: 800,
+                fontFamily: "Fredoka",
+                flexShrink: 0,
+              }}
+            >
+              See Give →
+            </button>
           </div>
         )}
 
