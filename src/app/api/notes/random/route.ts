@@ -21,13 +21,20 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const fingerprint = searchParams.get("fingerprint") || "";
 
+  // Pick + increment shown_count in one atomic statement (CTE), so the
+  // impression count can't drift from concurrent requests picking the same
+  // row between a separate SELECT and UPDATE.
   const pool = getPool();
   const res = await pool.query(
-    `SELECT id, text, source, country, mood, inspiring_count, not_helpful_count
-     FROM notes
-     WHERE status = 'approved' AND fingerprint IS DISTINCT FROM $1
-     ORDER BY random()
-     LIMIT 1`,
+    `WITH picked AS (
+       SELECT id FROM notes
+       WHERE status = 'approved' AND fingerprint IS DISTINCT FROM $1
+       ORDER BY random()
+       LIMIT 1
+     )
+     UPDATE notes SET shown_count = shown_count + 1
+     WHERE id = (SELECT id FROM picked)
+     RETURNING id, text, source, country, mood, inspiring_count, not_helpful_count, shown_count`,
     [fingerprint]
   );
   const row = res.rows[0];
@@ -42,6 +49,7 @@ export async function GET(req: NextRequest) {
       mood: row.mood,
       inspiring_count: row.inspiring_count,
       not_helpful_count: row.not_helpful_count,
+      shown_count: row.shown_count,
     },
   });
 }
