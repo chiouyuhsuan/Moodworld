@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS notes (
   mood              SMALLINT    CHECK (mood IS NULL OR mood BETWEEN 1 AND 7),
   inspiring_count   SMALLINT    NOT NULL DEFAULT 0,
   not_helpful_count SMALLINT    NOT NULL DEFAULT 0,
+  shown_count       INTEGER     NOT NULL DEFAULT 0,            -- times drawn by GET /api/notes/random
   UNIQUE (fingerprint, vote_date)
 );
 CREATE INDEX IF NOT EXISTS notes_status_idx ON notes (status);
