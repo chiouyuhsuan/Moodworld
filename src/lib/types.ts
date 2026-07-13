@@ -18,10 +18,14 @@ export type GlobalStats = {
 };
 
 export type AgeStats = {
+  scope?: "today" | "all";
   date: string;
   ranges: { age_range: string; average: number }[];
   highest: string;
   lowest: string;
+  total_checkins?: number;
+  today_checkins?: number;
+  since?: string | null;
 };
 
 export type DistributionStats = {
