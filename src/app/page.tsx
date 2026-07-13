@@ -306,7 +306,7 @@ export default function Home() {
           )}
           {tab === "global" && <GlobalScreen stats={globalStats} loading={statsLoading && !globalStats} today={today} />}
           {tab === "ages" && (
-            <AgesScreen stats={ageStats} loading={statsLoading && !ageStats} voted={voted} voteRecord={voteRecord} onGoTab={setTab} />
+            <AgesScreen stats={ageStats} loading={statsLoading && !ageStats} voted={voted} voteRecord={voteRecord} onGoTab={setTab} today={today} />
           )}
           {tab === "trends" && (
             <TrendsScreen
