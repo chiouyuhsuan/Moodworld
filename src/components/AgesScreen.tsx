@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { moodByLevel } from "@/lib/moods";
 import { ageRangeDisplay } from "@/lib/referenceData";
 import { trackEvent } from "@/lib/analytics";
@@ -8,21 +9,52 @@ import type { AgeStats } from "@/lib/types";
 import type { TabId } from "./TabBar";
 
 type VoteRecord = { mood: number; country: string; city: string | null; age_range: string };
+type Scope = "all" | "today";
 
+// Same reasoning as GlobalScreen: a single day's check-ins split thin
+// across 7 age ranges mostly show as "—", so default to All Time and let
+// people flip to Today. See src/app/api/stats/ages/route.ts for the
+// scope=all aggregation this depends on.
 export default function AgesScreen({
   stats,
   loading,
   voted,
   voteRecord,
   onGoTab,
+  today,
 }: {
   stats: AgeStats | null;
   loading: boolean;
   voted: boolean;
   voteRecord: VoteRecord | null;
   onGoTab: (t: TabId) => void;
+  today: string;
 }) {
-  if (loading || !stats) {
+  const [scope, setScope] = useState<Scope>("all");
+  const [allStats, setAllStats] = useState<AgeStats | null>(null);
+  const [allLoading, setAllLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAllLoading(true);
+    fetch(`/api/stats/ages?scope=all&date=${today}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setAllStats(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAllLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [today]);
+
+  const active = scope === "all" ? allStats : stats;
+  const activeLoading = scope === "all" ? allLoading && !allStats : loading;
+
+  if (activeLoading || !active) {
     return (
       <div style={{ padding: "58px 22px 118px" }}>
         <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>By age</div>
@@ -31,12 +63,18 @@ export default function AgesScreen({
     );
   }
 
-  const withData = stats.ranges.filter((r) => r.average !== null) as { age_range: string; average: number }[];
+  const stats_ = active;
+  const withData = stats_.ranges.filter((r) => r.average !== null) as { age_range: string; average: number }[];
   const hasAny = withData.length > 0;
   const maxRow = hasAny ? withData.reduce((a, b) => (b.average > a.average ? b : a)) : null;
   const minRow = hasAny ? withData.reduce((a, b) => (b.average < a.average ? b : a)) : null;
   const bm = maxRow ? moodByLevel(maxRow.average) : null;
   const wm = minRow ? moodByLevel(minRow.average) : null;
+
+  const todayCheckins = stats_.today_checkins ?? (scope === "today" ? stats_.total_checkins ?? 0 : 0);
+  const sinceLabel =
+    allStats?.since &&
+    new Date(allStats.since + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   let ac: {
     yourColor: string;
@@ -71,14 +109,44 @@ export default function AgesScreen({
 
   return (
     <div style={{ padding: "58px 22px 118px" }}>
-      <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>By age</div>
-      <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, marginTop: 2, marginBottom: 20 }}>
-        Average mood across age ranges today
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div>
+          <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 28, color: "#2B2733" }}>By age</div>
+          <div style={{ fontSize: 13, color: "#9B93A6", fontWeight: 700, marginTop: 2 }}>
+            {scope === "all"
+              ? `Average mood by age, all time · ${todayCheckins.toLocaleString("en-US")} today`
+              : "Average mood across age ranges today"}
+          </div>
+        </div>
+        <div style={{ display: "flex", background: "#F6F1F9", borderRadius: 999, padding: 3, flexShrink: 0 }}>
+          {(["all", "today"] as Scope[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                trackEvent("ages_scope_toggle", { scope: s });
+                setScope(s);
+              }}
+              style={{
+                padding: "7px 13px",
+                borderRadius: 999,
+                fontSize: 12.5,
+                fontWeight: 800,
+                fontFamily: "Fredoka",
+                background: scope === s ? "#2B2733" : "transparent",
+                color: scope === s ? "#fff" : "#9B93A6",
+                transition: "background .15s ease",
+              }}
+            >
+              {s === "all" ? "All Time" : "Today"}
+            </button>
+          ))}
+        </div>
       </div>
+      <div style={{ marginBottom: 20 }} />
 
       <div style={{ background: "#fff", borderRadius: 28, padding: "22px 18px 16px", boxShadow: "0 16px 36px -24px rgba(90,60,120,.5)" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8, height: 236 }}>
-          {stats.ranges.map((r) => {
+          {stats_.ranges.map((r) => {
             const has = r.average !== null;
             const mo = has ? moodByLevel(r.average as number) : null;
             const h = has ? (((r.average as number) - 3.4) / (5.6 - 3.4)) * 100 : 14;
@@ -122,7 +190,9 @@ export default function AgesScreen({
         </div>
       ) : (
         <div style={{ marginTop: 16, background: "#F6F1F9", borderRadius: 16, padding: "16px 18px", fontSize: 13, color: "#6B6478", fontWeight: 700, textAlign: "center" }}>
-          Not enough check-ins yet to rank age groups.
+          {scope === "all"
+            ? "Not enough check-ins yet to rank age groups."
+            : "Not enough check-ins yet today to rank age groups."}
         </div>
       )}
 
@@ -162,6 +232,12 @@ export default function AgesScreen({
           </button>
         </div>
       )}
+
+      <div style={{ marginTop: 18, background: "#F6F1F9", borderRadius: 16, padding: "13px 15px", fontSize: 11.5, color: "#9B93A6", fontWeight: 600, lineHeight: 1.55 }}>
+        {scope === "all" && sinceLabel
+          ? `Based on self-reported check-ins since ${sinceLabel} — not strictly de-duplicated, so treat it as a global vibe, not a census.`
+          : "Based on self-reported check-ins — not strictly de-duplicated, so treat it as a global vibe, not a census."}
+      </div>
     </div>
   );
 }
