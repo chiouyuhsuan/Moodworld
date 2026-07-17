@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { moodByLevel } from "@/lib/moods";
 import { trackEvent } from "@/lib/analytics";
 import MoodFace from "./MoodFace";
@@ -62,6 +62,34 @@ export default function GlobalScreen({
       cancelled = true;
     };
   }, []);
+
+  // Scroll-depth visibility for the "Top notes" section — answers "how many
+  // Global-tab visitors actually scroll far enough to see it" (previously
+  // untracked; nothing in GA4 measured this). Fires once per mount, only
+  // once topNotes has actually rendered (ref only attaches once the section
+  // exists), via a 50%-visible threshold so a sliver scrolling past doesn't
+  // count as "seen".
+  const topNotesRef = useRef<HTMLDivElement | null>(null);
+  const topNotesSeenFired = useRef(false);
+  useEffect(() => {
+    if (topNotes.length === 0) return;
+    const el = topNotesRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && !topNotesSeenFired.current) {
+            topNotesSeenFired.current = true;
+            trackEvent("top_notes_seen", { note_count: topNotes.length });
+            observer.disconnect();
+          }
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [topNotes]);
 
   const active = scope === "all" ? allStats : stats;
   const activeLoading = scope === "all" ? allLoading && !allStats : loading;
@@ -230,7 +258,7 @@ export default function GlobalScreen({
       )}
 
       {topNotes.length > 0 && (
-        <>
+        <div ref={topNotesRef}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, margin: "22px 2px 12px" }}>
             <span style={{ fontSize: 15 }}>💬</span>
             <div style={{ fontFamily: "Fredoka", fontWeight: 600, fontSize: 18, color: "#2B2733" }}>Top notes</div>
@@ -258,7 +286,7 @@ export default function GlobalScreen({
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       <div style={{ marginTop: 18, background: "#F6F1F9", borderRadius: 16, padding: "13px 15px", fontSize: 11.5, color: "#9B93A6", fontWeight: 600, lineHeight: 1.55 }}>
