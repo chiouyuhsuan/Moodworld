@@ -240,12 +240,15 @@ export default function Home() {
         setTrendScope("global");
         loadStats();
       } else if (data.error === "already_voted_today" && data.vote) {
+        trackEvent("vote_submit_error", { reason: "already_voted_today" });
         setVoted(true);
         setVoteRecord({ ...data.vote, streak: data.streak, justCompletedCycle: data.justCompletedCycle });
       } else {
+        trackEvent("vote_submit_error", { reason: data.error ?? "unknown" });
         setSubmitError("Something went wrong — please try again.");
       }
     } catch {
+      trackEvent("vote_submit_error", { reason: "network" });
       setSubmitError("Couldn't reach MoodWorld — check your connection and try again.");
     } finally {
       setSubmitting(false);
