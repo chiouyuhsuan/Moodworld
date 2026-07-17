@@ -827,7 +827,10 @@ export default function VoteScreen(props: Props) {
             </div>
           </div>
           <button
-            onClick={() => onGoTab("give")}
+            onClick={() => {
+              trackEvent("feeling_give_cta_click");
+              onGoTab("give");
+            }}
             style={{
               background: "#EE6B4D",
               color: "#fff",
@@ -979,7 +982,10 @@ export default function VoteScreen(props: Props) {
           <div style={{ position: "relative", marginBottom: 16 }}>
             <select
               value={country}
-              onChange={(e) => setCountry(e.target.value)}
+              onChange={(e) => {
+                trackEvent("country_selected", { country: e.target.value });
+                setCountry(e.target.value);
+              }}
               style={{
                 width: "100%",
                 appearance: "none",
@@ -1031,7 +1037,10 @@ export default function VoteScreen(props: Props) {
               return (
                 <button
                   key={code}
-                  onClick={() => setAge(code)}
+                  onClick={() => {
+                    trackEvent("age_selected", { age_range: code });
+                    setAge(code);
+                  }}
                   style={{
                     padding: "10px 14px",
                     borderRadius: 14,
